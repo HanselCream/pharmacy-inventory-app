@@ -407,7 +407,7 @@ export default function POSPage() {
                     disabled={processing}
                     className="w-full bg-primary text-primary-foreground py-3 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50"
                   >
-                    {processing ? 'Processing...' : 'Complete Sale'}
+                    {processing ? 'Processing...' : 'Generate Order'}
                   </button>
                 </div>
               </>

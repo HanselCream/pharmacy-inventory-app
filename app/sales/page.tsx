@@ -2,11 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { fetchSales } from '@/lib/api';
+import { createClient } from '@/lib/supabase/client';
 import { Sale } from '@/lib/types';
 import { Search, Calendar } from 'lucide-react';
 
+interface SaleWithMedicineName extends Sale {
+  medicineName?: string;
+}
+
 export default function SalesPage() {
-  const [sales, setSales] = useState<Sale[]>([]);
+  const [sales, setSales] = useState<SaleWithMedicineName[]>([]);
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -28,7 +33,24 @@ export default function SalesPage() {
       }
 
       const data = await fetchSales(filters);
-      setSales(data);
+      
+      // Fetch medicine names for each sale
+      const supabase = createClient();
+      const medicineIds = [...new Set(data.map(s => s.medicine_id))];
+      
+      const { data: medicines } = await supabase
+        .from('medicines')
+        .select('id, brand_name, generic_name')
+        .in('id', medicineIds);
+      
+      const medicineMap = new Map(medicines?.map(m => [m.id, `${m.brand_name} (${m.generic_name})`]) || []);
+      
+      const enrichedSales = data.map(sale => ({
+        ...sale,
+        medicineName: medicineMap.get(sale.medicine_id) || 'Unknown Medicine'
+      }));
+      
+      setSales(enrichedSales);
     } catch (error) {
       console.error('Error loading sales:', error);
     } finally {
@@ -131,7 +153,7 @@ export default function SalesPage() {
                           {new Date(sale.sale_date).toLocaleString()}
                         </td>
                         <td className="px-6 py-4 text-sm">
-                          <div className="font-medium text-foreground">Medicine {sale.medicine_id.substring(0, 8)}</div>
+                          <div className="font-medium text-foreground">{sale.medicineName || 'Unknown Medicine'}</div>
                         </td>
                         <td className="px-6 py-4 text-sm text-foreground">{sale.quantity_sold}</td>
                         <td className="px-6 py-4 text-sm text-foreground">₱{sale.unit_price.toFixed(2)}</td>
