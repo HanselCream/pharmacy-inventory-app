@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { fetchMedicines, recordSale, generateOrderNumber, validateStockAvailability } from '@/lib/api';
 import { Medicine } from '@/lib/types';
 import { Plus, Trash2, ShoppingCart } from 'lucide-react';
@@ -27,6 +27,7 @@ export default function POSPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState('');
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -36,13 +37,13 @@ const [discount, setDiscount] = useState<number | ''>('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'online'>('cash');
 const [amountPaid, setAmountPaid] = useState<number | ''>('');
 
-  useEffect(() => {
-    loadMedicines();
+useEffect(() => {
+    loadMedicines(true);
   }, []);
 
-  const loadMedicines = async () => {
+const loadMedicines = async (showLoader = false) => {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       const { medicines: data } = await fetchMedicines({ limit: 100, search });
       setMedicines(data);
     } catch (error) {
@@ -211,22 +212,27 @@ const receiptData: Receipt = {
         <p className="text-muted-foreground">Process customer purchases and track inventory</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div className="flex flex-col lg:flex-row gap-6">
         {/* Products Section */}
-        <div className="lg:col-span-2">
-          <div className="bg-card border border-border rounded-lg p-6 mb-6">
+<div className="lg:flex-[2]">
+            <div className="bg-card border border-border rounded-lg p-6 mb-6">
             <div className="relative mb-6">
-              <input
+<input
                 type="text"
                 placeholder="Search medicines..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onInput={loadMedicines}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  if (searchTimeout.current) clearTimeout(searchTimeout.current);
+                  searchTimeout.current = setTimeout(() => {
+                    loadMedicines();
+                  }, 400);
+                }}
                 className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
               {loading ? (
                 <div className="col-span-full text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -279,7 +285,7 @@ const receiptData: Receipt = {
 
         {/* Cart Section */}
 {/* Cart Section */}
-        <div className="lg:col-span-1">
+     <div className="lg:flex-[1] lg:min-w-[300px]">
           <div className="bg-card border border-border rounded-lg">
             <div className="p-6 border-b border-border">
               <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
@@ -345,7 +351,7 @@ const receiptData: Receipt = {
                       min="0"
                       max={subtotal}
 value={discount}
-                      onChange={(e) => setDiscount(e.target.value === '' ? '' : Math.max(0, Math.min(subtotal, parseFloat(e.target.value) || 0)))}
+onChange={(e) => setDiscount(e.target.value === '' ? '' : Math.max(0, parseFloat(e.target.value) || 0))}
                       className="w-full px-3 py-2 bg-background border border-border rounded text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
@@ -386,9 +392,12 @@ value={discount}
 onChange={(e) => setAmountPaid(e.target.value === '' ? '' : parseFloat(e.target.value))}
                         className="w-full px-3 py-2 bg-background border border-border rounded text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       />
-          {Number(amountPaid) > 0 && Number(amountPaid) >= total && (
-                        <p className="text-xs text-secondary mt-1">
-                          Change: ₱{(Number(amountPaid) - total).toFixed(2)}
+{Number(amountPaid) > 0 && (
+                        <p className={`text-xs mt-1 font-medium ${Number(amountPaid) >= total ? 'text-green-600' : 'text-destructive'}`}>
+                          {Number(amountPaid) >= total 
+                            ? `Change: ₱${(Number(amountPaid) - total).toFixed(2)}`
+                            : `Short: ₱${(total - Number(amountPaid)).toFixed(2)}`
+                          }
                         </p>
                       )}
                     </div>

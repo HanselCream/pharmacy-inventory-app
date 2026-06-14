@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
+import Sidebar from '@/components/sidebar'
 import './globals.css'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
@@ -50,33 +51,7 @@ export default function RootLayout({
 <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} bg-background light`}>
       <body className="font-sans antialiased bg-background text-foreground">
         <div className="flex h-screen overflow-hidden">
-          {/* Sidebar Navigation */}
-          <nav className="w-64 bg-card border-r border-border flex flex-col">
-            <div className="p-6 border-b border-border">
-              <h1 className="text-2xl font-bold text-primary">PharmaTrack</h1>
-              <p className="text-sm text-muted-foreground mt-1">Inventory System</p>
-            </div>
-            <ul className="flex-1 overflow-y-auto p-4 space-y-2">
-              <li>
-                <a href="/" className="block px-4 py-2 rounded-md hover:bg-accent text-foreground">Dashboard</a>
-              </li>
-              <li>
-                <a href="/medicines" className="block px-4 py-2 rounded-md hover:bg-accent text-foreground">Medicines</a>
-              </li>
-              <li>
-                <a href="/pos" className="block px-4 py-2 rounded-md hover:bg-accent text-foreground">POS</a>
-              </li>
-              <li>
-                <a href="/purchases" className="block px-4 py-2 rounded-md hover:bg-accent text-foreground">Purchases</a>
-              </li>
-              <li>
-                <a href="/sales" className="block px-4 py-2 rounded-md hover:bg-accent text-foreground">Sales</a>
-              </li>
-              <li>
-                <a href="/reports" className="block px-4 py-2 rounded-md hover:bg-accent text-foreground">Reports</a>
-              </li>
-            </ul>
-          </nav>
+          <Sidebar />
 
           {/* Main Content */}
           <main className="flex-1 overflow-y-auto">
