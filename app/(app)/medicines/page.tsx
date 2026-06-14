@@ -234,6 +234,7 @@ export default function MedicinesPage() {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Category</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Price</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Stock</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Expiry Date</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Status</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Actions</th>
                   </tr>
@@ -249,6 +250,12 @@ export default function MedicinesPage() {
                       <td className="px-6 py-4 text-sm text-muted-foreground">{med.category}</td>
                       <td className="px-6 py-4 text-sm text-foreground">₱{med.unit_price.toFixed(2)}</td>
                       <td className="px-6 py-4 text-sm text-foreground">{med.quantity_on_hand}</td>
+                      <td className="px-6 py-4 text-sm text-foreground">
+  {med.expiry_date 
+    ? new Date(med.expiry_date).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })
+    : <span className="text-muted-foreground">—</span>
+  }
+</td>
                       <td className="px-6 py-4 text-sm">
                         <div className="flex gap-2 flex-wrap">
 {isLowStock(med) && (
