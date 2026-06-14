@@ -1,6 +1,56 @@
 import { createClient } from '@/lib/supabase/client';
 import { Medicine, Sale, Purchase, Disposal, DashboardStats } from './types';
 
+// Helper: Generate order number in format ORD-YYYYMMDD-###
+export const generateOrderNumber = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const timestamp = Math.floor(Math.random() * 1000);
+  const sequence = String(timestamp).padStart(3, '0');
+  return `ORD-${year}${month}${day}-${sequence}`;
+};
+
+// Helper: Validate stock before checkout
+export const validateStockAvailability = async (
+  cartItems: Array<{ medicine_id: string; quantity_sold: number }>
+): Promise<{ valid: boolean; failedItem?: { medicine_id: string; requiredQty: number; availableQty: number } }> => {
+  const supabase = createClient();
+
+  for (const item of cartItems) {
+    const { data, error } = await supabase
+      .from('medicines')
+      .select('quantity_on_hand, brand_name')
+      .eq('id', item.medicine_id)
+      .single();
+
+    if (error) {
+      return {
+        valid: false,
+        failedItem: {
+          medicine_id: item.medicine_id,
+          requiredQty: item.quantity_sold,
+          availableQty: 0,
+        },
+      };
+    }
+
+    if (data.quantity_on_hand < item.quantity_sold) {
+      return {
+        valid: false,
+        failedItem: {
+          medicine_id: item.medicine_id,
+          requiredQty: item.quantity_sold,
+          availableQty: data.quantity_on_hand,
+        },
+      };
+    }
+  }
+
+  return { valid: true };
+};
+
 export const fetchMedicines = async (filters?: {
   search?: string;
   category?: string;
