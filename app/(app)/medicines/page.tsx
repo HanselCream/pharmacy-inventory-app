@@ -251,14 +251,19 @@ export default function MedicinesPage() {
                       <td className="px-6 py-4 text-sm text-foreground">{med.quantity_on_hand}</td>
                       <td className="px-6 py-4 text-sm">
                         <div className="flex gap-2 flex-wrap">
-                          {isLowStock(med) && (
-                            <span className="inline-flex items-center gap-1 bg-accent/10 text-accent px-2 py-1 rounded text-xs">
+{isLowStock(med) && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}>
                               <AlertTriangle size={14} /> Low Stock
                             </span>
                           )}
                           {isExpired(med) && (
-                            <span className="inline-flex items-center gap-1 bg-destructive/10 text-destructive px-2 py-1 rounded text-xs">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>
                               <Calendar size={14} /> Expired
+                            </span>
+                          )}
+                          {!isLowStock(med) && !isExpired(med) && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: '#DCFCE7', color: '#16A34A' }}>
+                              Active
                             </span>
                           )}
                         </div>

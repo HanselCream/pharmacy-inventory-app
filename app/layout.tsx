@@ -3,7 +3,9 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import Sidebar from '@/components/sidebar'
+import { headers } from 'next/headers'
 import './globals.css'
+
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
 const geistMono = Geist_Mono({
@@ -50,9 +52,7 @@ export default function RootLayout({
   return (
 <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} bg-background light`}>
       <body className="font-sans antialiased bg-background text-foreground">
-        <div className="flex h-screen overflow-hidden">
-          <Sidebar />
-
+<div className="flex h-screen overflow-hidden">
           {/* Main Content */}
           <main className="flex-1 overflow-y-auto">
             {children}

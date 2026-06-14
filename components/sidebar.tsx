@@ -45,3 +45,15 @@ export default function Sidebar() {
     </nav>
   );
 }
+
+<div className="p-4 border-t border-border">
+        <button
+          onClick={() => {
+            document.cookie = 'auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            window.location.href = '/login';
+          }}
+          className="w-full px-4 py-2 bg-destructive text-white rounded-md text-sm font-medium hover:opacity-90 transition"
+        >
+          Logout
+        </button>
+      </div>

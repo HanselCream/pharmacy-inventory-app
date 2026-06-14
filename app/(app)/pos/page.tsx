@@ -153,16 +153,18 @@ return Math.max(0, subtotal - (Number(discount) || 0));
         return;
       }
 
-// Process each sale
-      for (const item of cart) {
-        await recordSale({
-          medicine_id: item.medicine.id,
-          quantity_sold: item.quantity,
-          unit_price: item.medicine.unit_price,
-          total_amount: item.medicine.unit_price * item.quantity,
-          sale_date: new Date().toISOString(),
-        });
-      }
+// Process all sales in parallel
+      await Promise.all(
+        cart.map((item) =>
+          recordSale({
+            medicine_id: item.medicine.id,
+            quantity_sold: item.quantity,
+            unit_price: item.medicine.unit_price,
+            total_amount: item.medicine.unit_price * item.quantity,
+            sale_date: new Date().toISOString(),
+          })
+        )
+      );
 
       // Generate receipt
       const orderNumber = generateOrderNumber();
@@ -254,9 +256,9 @@ const receiptData: Receipt = {
                           <p className="text-xs text-muted-foreground">{medicine.generic_name}</p>
                           <div className="text-xs text-muted-foreground mt-1">
                             <p>Stock: {medicine.quantity_on_hand}</p>
-                            {inCart > 0 && <p className="text-accent">In cart: {inCart}</p>}
+{inCart > 0 && <p style={{ color: '#D97706' }}>In cart: {inCart}</p>}
                             {availableStock > 0 && (
-                              <p className="text-secondary">Available: {availableStock}</p>
+                              <p style={{ color: '#16A34A' }}>Available: {availableStock}</p>
                             )}
                           </div>
                         </div>
