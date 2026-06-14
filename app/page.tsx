@@ -138,7 +138,7 @@ export default function Dashboard() {
                   border: `1px solid var(--border)`,
                   borderRadius: '0.625rem'
                 }}
-                formatter={(value) => `₱${parseFloat(value).toFixed(2)}`}
+                formatter={(value) => `₱${parseFloat(String(value)).toFixed(2)}`}
               />
               <Legend />
               <Line type="monotone" dataKey="amount" stroke="var(--primary)" strokeWidth={2} dot={{ fill: 'var(--primary)', r: 5 }} />
@@ -146,41 +146,39 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Category Inventory List */}
-        <div className="bg-card border border-border rounded-lg p-6">
-          <h2 className="text-lg font-bold text-foreground mb-4">Inventory by Category</h2>
-          <div className="space-y-3">
-            {categoryData.length > 0 ? (
-              categoryData.map((category, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-4 h-4 rounded-full"
-                      style={{
-                        backgroundColor: COLORS[index % COLORS.length],
-                      }}
-                    ></div>
-                    <span className="font-medium text-foreground">{category.name}</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-32 bg-secondary rounded-full h-2">
-                      <div
-                        className="h-2 rounded-full transition-all"
-                        style={{
-                          width: `${Math.min(100, (category.value / Math.max(...categoryData.map(c => c.value))) * 100)}%`,
-                          backgroundColor: COLORS[index % COLORS.length],
-                        }}
-                      ></div>
-                    </div>
-                    <span className="text-sm font-semibold text-primary min-w-[50px] text-right">{category.value} units</span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground text-center py-4">No category data available</p>
-            )}
+{/* Category Inventory List */}
+<div className="bg-card border border-border rounded-lg p-6">
+  <h2 className="text-lg font-bold text-foreground mb-4">Inventory by Category</h2>
+  <div className="space-y-3 max-h-80 overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin' }}>
+    {categoryData.length > 0 ? (
+      categoryData.map((category, index) => (
+        <div key={index} className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-4 h-4 rounded-full flex-shrink-0"
+              style={{ backgroundColor: COLORS[index % COLORS.length] }}
+            ></div>
+            <span className="font-medium text-foreground">{category.name}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="w-32 bg-secondary rounded-full h-2">
+              <div
+                className="h-2 rounded-full transition-all"
+                style={{
+                  width: `${Math.min(100, (category.value / Math.max(...categoryData.map(c => c.value))) * 100)}%`,
+                  backgroundColor: COLORS[index % COLORS.length],
+                }}
+              ></div>
+            </div>
+            <span className="text-sm font-semibold text-primary min-w-[50px] text-right">{category.value} units</span>
           </div>
         </div>
+      ))
+    ) : (
+      <p className="text-muted-foreground text-center py-4">No category data available</p>
+    )}
+  </div>
+</div>
       </div>
     </div>
   );

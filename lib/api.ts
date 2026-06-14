@@ -189,11 +189,18 @@ export const recordDisposal = async (
 export const fetchDashboardStats = async (): Promise<DashboardStats> => {
   const supabase = createClient();
 
-  const { data: medicines } = await supabase.from('medicines').select('*');
-  const { data: sales } = await supabase
+  const { data: medicines, error: medError } = await supabase
+    .from('medicines')
+    .select('*');
+  
+  if (medError) throw new Error('medicines: ' + medError.message);
+
+  const { data: sales, error: salesError } = await supabase
     .from('sales')
     .select('*')
     .gte('sale_date', new Date(new Date().setHours(0, 0, 0, 0)).toISOString());
+
+  if (salesError) throw new Error('sales: ' + salesError.message);
 
   const medicinesArray = medicines || [];
   const salesArray = sales || [];
@@ -252,17 +259,13 @@ export const fetchSales = async (filters?: {
 
 export const fetchCategories = async (): Promise<string[]> => {
   const supabase = createClient();
+
   const { data, error } = await supabase
     .from('medicines')
-    .select('category')
-    .order('category')
-    .limit(1);
+    .select('category');
 
   if (error) throw error;
 
-  const { data: allCategories } = await supabase
-    .from('medicines')
-    .select('category', { distinct: true });
-
-  return allCategories?.map((m) => m.category).filter((c) => c) || [];
+  const unique = [...new Set(data?.map((m) => m.category).filter(Boolean))];
+  return unique.sort();
 };

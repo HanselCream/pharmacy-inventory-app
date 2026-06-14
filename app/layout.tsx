@@ -47,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} bg-background`}>
+<html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} bg-background light`}>
       <body className="font-sans antialiased bg-background text-foreground">
         <div className="flex h-screen overflow-hidden">
           {/* Sidebar Navigation */}

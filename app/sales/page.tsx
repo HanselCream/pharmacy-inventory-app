@@ -142,7 +142,6 @@ export default function SalesPage() {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Quantity</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Unit Price</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Total</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Cashier</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -160,7 +159,6 @@ export default function SalesPage() {
                         <td className="px-6 py-4 text-sm font-semibold text-foreground">
                           ₱{sale.total_amount.toFixed(2)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-muted-foreground">{sale.cashier_name || 'N/A'}</td>
                       </tr>
                     ))
                   ) : (

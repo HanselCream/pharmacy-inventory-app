@@ -20,7 +20,7 @@ export interface Sale {
   unit_price: number;
   total_amount: number;
   sale_date: string;
-  cashier_name: string | null;
+  cashier_name?: string;
   created_at: string;
   medicine?: Medicine;
 }

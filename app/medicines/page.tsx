@@ -117,11 +117,11 @@ export default function MedicinesPage() {
           className="px-4 py-2 bg-card border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value="all">All Categories</option>
-          {categories.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
-          ))}
+{categories.map((cat, index) => (
+  <option key={`${cat}-${index}`} value={cat}>
+    {cat}
+  </option>
+))}
         </select>
       </div>
 

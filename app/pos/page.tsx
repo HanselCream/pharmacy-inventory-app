@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { fetchMedicines, recordSale, generateOrderNumber, validateStockAvailability } from '@/lib/api';
 import { Medicine } from '@/lib/types';
-import { Plus, Trash2, ShoppingCart, DollarSign, X, Printer } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CartItem {
@@ -32,9 +32,9 @@ export default function POSPage() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
-  const [discount, setDiscount] = useState(0);
+const [discount, setDiscount] = useState<number | ''>('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'online'>('cash');
-  const [amountPaid, setAmountPaid] = useState(0);
+const [amountPaid, setAmountPaid] = useState<number | ''>('');
 
   useEffect(() => {
     loadMedicines();
@@ -112,8 +112,8 @@ export default function POSPage() {
   };
 
   const calculateTotal = () => {
-    const subtotal = cart.reduce((sum, item) => sum + item.medicine.unit_price * item.quantity, 0);
-    return Math.max(0, subtotal - discount);
+const subtotal = cart.reduce((sum, item) => sum + item.medicine.unit_price * item.quantity, 0);
+return Math.max(0, subtotal - (Number(discount) || 0));
   };
 
   const calculateSubtotal = () => {
@@ -152,7 +152,7 @@ export default function POSPage() {
         return;
       }
 
-      // Process each sale
+// Process each sale
       for (const item of cart) {
         await recordSale({
           medicine_id: item.medicine.id,
@@ -167,17 +167,16 @@ export default function POSPage() {
       const orderNumber = generateOrderNumber();
       const subtotal = calculateSubtotal();
       const total = calculateTotal();
-      const change = paymentMethod === 'cash' ? Math.max(0, amountPaid - total) : 0;
-
-      const receiptData: Receipt = {
+const change = paymentMethod === 'cash' ? Math.max(0, (Number(amountPaid) || 0) - total) : 0;
+const receiptData: Receipt = {
         orderNumber,
         timestamp: new Date().toLocaleString(),
         items: [...cart],
         subtotal,
-        discount,
+        discount: Number(discount) || 0,
         total,
         paymentMethod,
-        amountPaid: paymentMethod === 'cash' ? amountPaid : undefined,
+        amountPaid: paymentMethod === 'cash' ? Number(amountPaid) || 0 : undefined,
         change: paymentMethod === 'cash' ? change : undefined,
       };
 
@@ -200,10 +199,6 @@ export default function POSPage() {
     } finally {
       setProcessing(false);
     }
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   const subtotal = calculateSubtotal();
@@ -283,14 +278,17 @@ export default function POSPage() {
         </div>
 
         {/* Cart Section */}
+{/* Cart Section */}
         <div className="lg:col-span-1">
-          <div className="bg-card border border-border rounded-lg p-6 sticky top-8">
-            <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-              <ShoppingCart size={24} /> Cart
-            </h2>
+          <div className="bg-card border border-border rounded-lg">
+            <div className="p-6 border-b border-border">
+              <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <ShoppingCart size={24} /> Cart
+              </h2>
+            </div>
 
-            <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
-              {cart.length === 0 ? (
+            <div className="p-6 space-y-3">
+                         {cart.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">Cart is empty</p>
               ) : (
                 cart.map((item) => (
@@ -307,63 +305,75 @@ export default function POSPage() {
                         <Trash2 size={16} />
                       </button>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => updateQuantity(item.medicine.id, item.quantity - 1)}
-                        className="px-2 py-1 bg-muted text-muted-foreground rounded hover:bg-border transition"
-                      >
-                        -
-                      </button>
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) =>
-                          updateQuantity(item.medicine.id, parseInt(e.target.value) || 1)
-                        }
-                        className="flex-1 px-2 py-1 bg-background border border-border rounded text-foreground text-center"
-                      />
-                      <button
-                        onClick={() => updateQuantity(item.medicine.id, item.quantity + 1)}
-                        className="px-2 py-1 bg-muted text-muted-foreground rounded hover:bg-border transition"
-                      >
-                        +
-                      </button>
-                    </div>
+<div className="flex items-center gap-2 mt-2">
+  <button
+    onClick={() => updateQuantity(item.medicine.id, item.quantity - 1)}
+    className="w-8 h-8 flex items-center justify-center bg-muted text-muted-foreground rounded hover:bg-border transition flex-shrink-0"
+  >
+    -
+  </button>
+  <input
+    type="number"
+    min="1"
+    value={item.quantity}
+    onChange={(e) =>
+      updateQuantity(item.medicine.id, parseInt(e.target.value) || 1)
+    }
+    className="w-full px-2 py-1 bg-background border border-border rounded text-foreground text-center"
+  />
+  <button
+    onClick={() => updateQuantity(item.medicine.id, item.quantity + 1)}
+    className="w-8 h-8 flex items-center justify-center bg-muted text-muted-foreground rounded hover:bg-border transition flex-shrink-0"
+  >
+    +
+  </button>
+</div>
                     <p className="text-sm text-foreground mt-2">
                       Subtotal: ₱{(item.medicine.unit_price * item.quantity).toFixed(2)}
                     </p>
                   </div>
                 ))
               )}
-            </div>
+</div>
 
-            {cart.length > 0 && (
-              <>
-                <div className="border-t border-border pt-4 mb-4 space-y-4">
+          {cart.length > 0 && (
+            <div className="border-t border-border p-6 pt-4 space-y-4">
                   <div>
                     <label className="text-xs text-muted-foreground block mb-1">Discount (₱)</label>
                     <input
                       type="number"
                       min="0"
                       max={subtotal}
-                      value={discount}
-                      onChange={(e) => setDiscount(Math.max(0, Math.min(subtotal, parseFloat(e.target.value) || 0)))}
+value={discount}
+                      onChange={(e) => setDiscount(e.target.value === '' ? '' : Math.max(0, Math.min(subtotal, parseFloat(e.target.value) || 0)))}
                       className="w-full px-3 py-2 bg-background border border-border rounded text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
 
-                  <div>
+<div>
                     <label className="text-xs text-muted-foreground block mb-1">Payment Method</label>
-                    <select
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value as any)}
-                      className="w-full px-3 py-2 bg-background border border-border rounded text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    >
-                      <option value="cash">Cash</option>
-                      <option value="card">Card</option>
-                      <option value="online">Online</option>
-                    </select>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setPaymentMethod('cash')}
+                        className={`py-2 rounded-lg text-sm font-medium border transition ${
+                          paymentMethod === 'cash'
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background text-foreground border-border hover:border-primary'
+                        }`}
+                      >
+                        💵 Cash
+                      </button>
+                      <button
+                        onClick={() => setPaymentMethod('online')}
+                        className={`py-2 rounded-lg text-sm font-medium border transition ${
+                          paymentMethod === 'online'
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background text-foreground border-border hover:border-primary'
+                        }`}
+                      >
+                        📱 QR
+                      </button>
+                    </div>
                   </div>
 
                   {paymentMethod === 'cash' && (
@@ -373,12 +383,12 @@ export default function POSPage() {
                         type="number"
                         min="0"
                         value={amountPaid}
-                        onChange={(e) => setAmountPaid(parseFloat(e.target.value) || 0)}
+onChange={(e) => setAmountPaid(e.target.value === '' ? '' : parseFloat(e.target.value))}
                         className="w-full px-3 py-2 bg-background border border-border rounded text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       />
-                      {amountPaid > 0 && amountPaid >= total && (
+          {Number(amountPaid) > 0 && Number(amountPaid) >= total && (
                         <p className="text-xs text-secondary mt-1">
-                          Change: ₱{(amountPaid - total).toFixed(2)}
+                          Change: ₱{(Number(amountPaid) - total).toFixed(2)}
                         </p>
                       )}
                     </div>
@@ -387,18 +397,17 @@ export default function POSPage() {
                   <div className="bg-primary/10 border border-primary/20 rounded p-4">
                     <p className="text-xs text-muted-foreground mb-1">Subtotal</p>
                     <p className="text-sm text-foreground mb-2">₱{subtotal.toFixed(2)}</p>
-                    {discount > 0 && (
+                   {Number(discount) > 0 && (
                       <>
                         <p className="text-xs text-muted-foreground">Discount</p>
-                        <p className="text-sm text-destructive mb-2">-₱{discount.toFixed(2)}</p>
+                        <p className="text-sm text-destructive mb-2">-₱{Number(discount).toFixed(2)}</p>
                       </>
                     )}
                     <div className="border-t border-primary/20 pt-2">
                       <p className="text-xs text-muted-foreground mb-1">Total Amount</p>
-                      <p className="text-3xl font-bold text-primary flex items-center gap-2">
-                        <DollarSign size={28} />
-                        {total.toFixed(2)}
-                      </p>
+ <p className="text-3xl font-bold text-primary">
+  ₱{total.toFixed(2)}
+</p>
                     </div>
                   </div>
 
@@ -409,12 +418,11 @@ export default function POSPage() {
                   >
                     {processing ? 'Processing...' : 'Generate Order'}
                   </button>
-                </div>
-              </>
-            )}
-          </div>
+</div>
+          )}
         </div>
       </div>
+    </div>
 
       {/* Confirmation Modal */}
       {showConfirmation && (
@@ -426,10 +434,10 @@ export default function POSPage() {
                 <span className="text-muted-foreground">Subtotal:</span>
                 <span className="text-foreground">₱{subtotal.toFixed(2)}</span>
               </div>
-              {discount > 0 && (
+              {Number(discount) > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Discount:</span>
-                  <span className="text-destructive">-₱{discount.toFixed(2)}</span>
+                  <span className="text-destructive">-₱{Number(discount).toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between text-lg font-bold pt-2 border-t border-border">
@@ -450,7 +458,7 @@ export default function POSPage() {
               </button>
               <button
                 onClick={processCheckout}
-                disabled={processing || (paymentMethod === 'cash' && amountPaid < total)}
+disabled={processing || (paymentMethod === 'cash' && (Number(amountPaid) || 0) < total)}
                 className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90 transition disabled:opacity-50"
               >
                 {processing ? 'Processing...' : 'Confirm'}
@@ -511,7 +519,7 @@ export default function POSPage() {
                 <p>Payment: {receipt.paymentMethod.toUpperCase()}</p>
                 {receipt.amountPaid !== undefined && (
                   <>
-                    <p>Amount Paid: ₱{receipt.amountPaid.toFixed(2)}</p>
+                    <p>Amount Paid: ₱{Number(receipt.amountPaid).toFixed(2)}</p>
                     <p className="text-secondary">Change: ₱{(receipt.change || 0).toFixed(2)}</p>
                   </>
                 )}
@@ -523,16 +531,10 @@ export default function POSPage() {
             </div>
 
             {/* Modal Actions */}
-            <div className="border-t border-border p-4 flex gap-3 bg-background sticky bottom-0">
-              <button
-                onClick={handlePrint}
-                className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90 transition flex items-center justify-center gap-2"
-              >
-                <Printer size={16} /> Print
-              </button>
+<div className="border-t border-border p-4 bg-background sticky bottom-0">
               <button
                 onClick={() => setShowReceipt(false)}
-                className="flex-1 px-4 py-2 bg-muted text-muted-foreground rounded hover:bg-border transition"
+                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90 transition"
               >
                 Close
               </button>
