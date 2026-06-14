@@ -5,7 +5,9 @@ export async function middleware(request: NextRequest) {
   const auth = request.cookies.get('auth')?.value;
   const pathname = request.nextUrl.pathname;
   const isLoginPage = pathname === '/login';
-  const isPublic = pathname.startsWith('/_next') || pathname.startsWith('/favicon');
+  const isPublic = pathname.startsWith('/_next') 
+    || pathname.startsWith('/favicon')
+    || pathname.startsWith('/api'); // ← add this
 
   if (isPublic) return NextResponse.next();
 

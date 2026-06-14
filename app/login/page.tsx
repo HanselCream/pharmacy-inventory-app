@@ -9,22 +9,23 @@ export default function LoginPage() {
   const router = useRouter();
 
 const handleLogin = async () => {
-    try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      });
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+      credentials: 'include', // ← added
+    });
 
-      if (res.ok) {
-        window.location.href = '/pos';
-      } else {
-        setError('Incorrect password. Please try again.');
-      }
-    } catch {
-      setError('Something went wrong. Please try again.');
+    if (res.ok) {
+      router.push('/pos'); // ← changed from window.location.href
+    } else {
+      setError('Incorrect password. Please try again.');
     }
-  };
+  } catch {
+    setError('Something went wrong. Please try again.');
+  }
+};
 
   return (
     <div style={{
