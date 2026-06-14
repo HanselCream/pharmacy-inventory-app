@@ -10,8 +10,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'PharmaTrack - Pharmacy Inventory Management',
+  description: 'Complete pharmacy inventory management system with POS, sales, and purchase tracking',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -46,9 +46,42 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="font-sans antialiased">
-        {children}
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} bg-background`}>
+      <body className="font-sans antialiased bg-background text-foreground">
+        <div className="flex h-screen overflow-hidden">
+          {/* Sidebar Navigation */}
+          <nav className="w-64 bg-card border-r border-border flex flex-col">
+            <div className="p-6 border-b border-border">
+              <h1 className="text-2xl font-bold text-primary">PharmaTrack</h1>
+              <p className="text-sm text-muted-foreground mt-1">Inventory System</p>
+            </div>
+            <ul className="flex-1 overflow-y-auto p-4 space-y-2">
+              <li>
+                <a href="/" className="block px-4 py-2 rounded-md hover:bg-accent text-foreground">Dashboard</a>
+              </li>
+              <li>
+                <a href="/medicines" className="block px-4 py-2 rounded-md hover:bg-accent text-foreground">Medicines</a>
+              </li>
+              <li>
+                <a href="/pos" className="block px-4 py-2 rounded-md hover:bg-accent text-foreground">POS</a>
+              </li>
+              <li>
+                <a href="/purchases" className="block px-4 py-2 rounded-md hover:bg-accent text-foreground">Purchases</a>
+              </li>
+              <li>
+                <a href="/sales" className="block px-4 py-2 rounded-md hover:bg-accent text-foreground">Sales</a>
+              </li>
+              <li>
+                <a href="/reports" className="block px-4 py-2 rounded-md hover:bg-accent text-foreground">Reports</a>
+              </li>
+            </ul>
+          </nav>
+
+          {/* Main Content */}
+          <main className="flex-1 overflow-y-auto">
+            {children}
+          </main>
+        </div>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
