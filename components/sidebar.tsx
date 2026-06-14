@@ -22,7 +22,10 @@ export default function Sidebar() {
       </div>
       <ul className="flex-1 overflow-y-auto p-4 space-y-2">
         {links.map((link) => {
-          const isActive = pathname === link.href;
+          const isActive =
+  pathname === link.href ||
+  (pathname === '/' && link.href === '/pos');
+
           return (
 <li key={link.href}>
         <a      
