@@ -9,12 +9,12 @@ export async function POST(request: NextRequest) {
     // 2. Debug logs: Check your server terminal to see these values!
     console.log('--- Auth Debug ---');
     console.log('Received Password:', password);
-    console.log('Expected Password (ENV):', process.env.NEXT_PUBLIC_APP_PASSWORD);
+    console.log('Expected Password (ENV):', process.env.APP_PASSWORD);
     console.log('------------------');
 
     // 3. Fail early if the server environment is misconfigured
-    if (!process.env.NEXT_PUBLIC_APP_PASSWORD) {
-      console.error("CRITICAL: NEXT_PUBLIC_APP_PASSWORD is not defined in your environment variables.");
+    if (!process.env.APP_PASSWORD) {
+      console.error("CRITICAL: APP_PASSWORD is not defined in your environment variables.");
       return NextResponse.json(
         { success: false, error: "Server configuration error" }, 
         { status: 500 }
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Validate credentials
-    if (password === process.env.NEXT_PUBLIC_APP_PASSWORD) {
+    if (password === process.env.APP_PASSWORD) {
       const response = NextResponse.json({ success: true });
       
       response.cookies.set('auth', 'true', {
