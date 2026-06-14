@@ -15,16 +15,38 @@ export default function Dashboard() {
 useEffect(() => {
   const loadDashboard = async () => {
     try {
-      const [dashStats, sales, medicines] = await Promise.all([
+      const [dashStats, salesData, medicinesData] = await Promise.all([
         fetchDashboardStats(),
         fetchSales(),
         fetchMedicines({ limit: 50 }),
       ]);
-      console.log('dashStats:', dashStats);
-      console.log('sales:', sales);
-      console.log('medicines:', medicines);
+
+      setStats(dashStats);
+
+      // Build chart data from last 7 days of sales
+      const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (6 - i));
+        const dateStr = d.toISOString().split('T')[0];
+        const dayTotal = salesData
+          .filter((s: any) => s.sale_date?.startsWith(dateStr))
+.reduce((sum: number, s: any) => sum + (s.total_amount || 0), 0);
+        return { date: d.toLocaleDateString('en-US', { weekday: 'short' }), amount: dayTotal };
+      });
+      setChartData(last7Days);
+
+      // Build category data from medicines
+      const categoryMap: Record<string, number> = {};
+      medicinesData.medicines.forEach((m: any) => {
+        const cat = m.category || 'Uncategorized';
+        categoryMap[cat] = (categoryMap[cat] || 0) + (m.quantity_on_hand || 0);
+      });
+      setCategoryData(Object.entries(categoryMap).map(([name, value]) => ({ name, value })));
+
     } catch (error) {
-      console.error('DASHBOARD ERROR:', error); // ← check this
+      console.error('DASHBOARD ERROR:', error);
+    } finally {
+      setLoading(false); // ← fixes the infinite spinner
     }
   };
   loadDashboard();
