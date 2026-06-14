@@ -5,7 +5,6 @@ import { fetchDashboardStats, fetchSales, fetchMedicines } from '@/lib/api';
 import { DashboardStats } from '@/lib/types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { AlertCircle, Package, TrendingUp, DollarSign } from 'lucide-react';
-import { redirect } from 'next/navigation';
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -13,55 +12,23 @@ export default function Dashboard() {
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadDashboard = async () => {
-      try {
-        // Fetch data in parallel for better performance
-        const [dashStats, sales, medicines] = await Promise.all([
-          fetchDashboardStats(),
-          fetchSales(),
-          fetchMedicines({ limit: 50 }), // Limit to 50 for dashboard performance
-        ]);
-        
-        setStats(dashStats);
-
-        // Prepare sales chart data (last 7 days)
-        const salesByDate: { [key: string]: number } = {};
-        sales.slice(-50).forEach((sale) => { // Only process last 50 sales for chart
-          const date = new Date(sale.sale_date).toLocaleDateString();
-          salesByDate[date] = (salesByDate[date] || 0) + sale.total_amount;
-        });
-
-        const chartDataArray = Object.entries(salesByDate)
-          .slice(-7)
-          .map(([date, amount]) => ({
-            date,
-            amount: parseFloat(amount.toFixed(2)),
-          }));
-        setChartData(chartDataArray);
-
-        // Prepare category data
-        const categoryTotals: { [key: string]: number } = {};
-        medicines.medicines.forEach((med) => {
-          categoryTotals[med.category] = (categoryTotals[med.category] || 0) + med.quantity_on_hand;
-        });
-
-        const categoryArray = Object.entries(categoryTotals)
-          .map(([name, value]) => ({
-            name,
-            value,
-          }))
-          .sort((a, b) => b.value - a.value); // Sort by quantity descending
-        setCategoryData(categoryArray);
-      } catch (error) {
-        console.error('Error loading dashboard:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadDashboard();
-  }, []);
+useEffect(() => {
+  const loadDashboard = async () => {
+    try {
+      const [dashStats, sales, medicines] = await Promise.all([
+        fetchDashboardStats(),
+        fetchSales(),
+        fetchMedicines({ limit: 50 }),
+      ]);
+      console.log('dashStats:', dashStats);
+      console.log('sales:', sales);
+      console.log('medicines:', medicines);
+    } catch (error) {
+      console.error('DASHBOARD ERROR:', error); // ← check this
+    }
+  };
+  loadDashboard();
+}, []);
 
   if (loading) {
     return (
