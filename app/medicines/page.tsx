@@ -12,7 +12,8 @@ export default function MedicinesPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [categories, setCategories] = useState<string[]>([]);
-  const [page, setPage] = useState(1);
+const [page, setPage] = useState(1);
+const [limit, setLimit] = useState(10);
   const [loading, setLoading] = useState(true);
 const [sortBy, setSortBy] = useState<'expiry_asc' | 'expiry_desc' | 'name_asc' | 'name_desc' | 'status_asc' | 'status_desc'>('expiry_asc');
   
@@ -30,21 +31,21 @@ const [sortBy, setSortBy] = useState<'expiry_asc' | 'expiry_desc' | 'name_asc' |
     supplier_name: '',
   });
 
-  useEffect(() => {
-    loadMedicines();
-    loadCategories();
-  }, [search, category, page, sortBy]);
+useEffect(() => {
+  loadMedicines();
+  loadCategories();
+}, [search, category, page, sortBy, limit]);
 
-  const loadMedicines = async () => {
-    try {
-      setLoading(true);
-      const { medicines: data, total: count } = await fetchMedicines({
-        search,
-        category,
-        page,
-        limit: 10,
-        sortBy,
-      });
+const loadMedicines = async () => {
+  try {
+    setLoading(true);
+    const { medicines: data, total: count } = await fetchMedicines({
+      search,
+      category,
+      page,
+      limit, // ← Changed from limit: 10 to limit
+      sortBy,
+    });
       setMedicines(data);
       setTotal(count);
     } catch (error) {
@@ -560,28 +561,98 @@ const [sortBy, setSortBy] = useState<'expiry_asc' | 'expiry_desc' | 'name_asc' |
               </table>
             </div>
 
-            {/* Pagination */}
-            <div className="px-4 py-4 border-t border-border flex items-center justify-between flex-wrap gap-2">
-              <span className="text-sm text-muted-foreground">
-                Showing {(page - 1) * 10 + 1} to {Math.min(page * 10, total)} of {total}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage(Math.max(1, page - 1))}
-                  disabled={page === 1}
-                  className="px-3 py-1 bg-card border border-border rounded text-foreground disabled:opacity-50 hover:bg-background transition"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setPage(page + 1)}
-                  disabled={page * 10 >= total}
-                  className="px-3 py-1 bg-card border border-border rounded text-foreground disabled:opacity-50 hover:bg-background transition"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+              {/* Pagination */}
+<div className="px-4 py-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+  {/* Left side - Showing info */}
+  <span className="text-sm text-muted-foreground">
+    Showing {(page - 1) * limit + 1} to {Math.min(page * limit, total)} of {total}
+  </span>
+
+  {/* Right side - Pagination controls */}
+  <div className="flex items-center gap-3 flex-wrap justify-center">
+    {/* Page Size Selector */}
+    <div className="flex items-center gap-2">
+      <label className="text-sm text-muted-foreground">Show:</label>
+      <select
+        value={limit}
+        onChange={(e) => {
+          setLimit(Number(e.target.value));
+          setPage(1);
+        }}
+        className="px-2 py-1 bg-background border border-border rounded text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+      >
+        <option value="10">10</option>
+        <option value="25">25</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+    </div>
+
+    {/* Page Numbers */}
+    <div className="flex items-center gap-1">
+      {/* Previous Button */}
+      <button
+        onClick={() => setPage(Math.max(1, page - 1))}
+        disabled={page === 1}
+        className="px-3 py-1 bg-card border border-border rounded text-foreground disabled:opacity-50 hover:bg-background transition text-sm"
+      >
+        Prev
+      </button>
+
+      {/* First Page */}
+      {page > 3 && (
+        <>
+          <button
+            onClick={() => setPage(1)}
+            className="px-3 py-1 bg-card border border-border rounded text-foreground hover:bg-background transition text-sm"
+          >
+            1
+          </button>
+          {page > 4 && <span className="text-muted-foreground text-sm">...</span>}
+        </>
+      )}
+
+      {/* Page Numbers */}
+      {Array.from({ length: Math.ceil(total / limit) }, (_, i) => i + 1)
+        .filter(p => p >= page - 2 && p <= page + 2)
+        .map((p) => (
+          <button
+            key={p}
+            onClick={() => setPage(p)}
+            className={`px-3 py-1 rounded text-sm transition ${
+              p === page
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card border border-border text-foreground hover:bg-background'
+            }`}
+          >
+            {p}
+          </button>
+        ))}
+
+      {/* Last Page */}
+      {page < Math.ceil(total / limit) - 2 && (
+        <>
+          {page < Math.ceil(total / limit) - 3 && <span className="text-muted-foreground text-sm">...</span>}
+          <button
+            onClick={() => setPage(Math.ceil(total / limit))}
+            className="px-3 py-1 bg-card border border-border rounded text-foreground hover:bg-background transition text-sm"
+          >
+            {Math.ceil(total / limit)}
+          </button>
+        </>
+      )}
+
+      {/* Next Button */}
+      <button
+        onClick={() => setPage(Math.min(Math.ceil(total / limit), page + 1))}
+        disabled={page >= Math.ceil(total / limit)}
+        className="px-3 py-1 bg-card border border-border rounded text-foreground disabled:opacity-50 hover:bg-background transition text-sm"
+      >
+        Next
+      </button>
+    </div>
+  </div>
+</div>
           </>
         )}
       </div>
