@@ -12,25 +12,21 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'PharmaTrack - Pharmacy Inventory Management',
-  description: 'Complete pharmacy inventory management system with POS, sales, and purchase tracking',
+  title: 'PamiPharma Inventory',
+  description: 'Pharmacy inventory management system with POS, sales, and purchase tracking',
   generator: 'v0.app',
   icons: {
     icon: [
       {
-        url: '/icon-light-32x32.png',
+        url: '/ppIcon.png',
         media: '(prefers-color-scheme: light)',
       },
       {
-        url: '/icon-dark-32x32.png',
+        url: '/ppIcon.png',
         media: '(prefers-color-scheme: dark)',
       },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
     ],
-    apple: '/apple-icon.png',
+    apple: '/ppIcon.png',
   },
 }
 

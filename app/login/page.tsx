@@ -51,10 +51,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#EFF6FF] p-4">
       <div className="bg-white border border-[#BFDBFE] rounded-xl p-8 w-full max-w-md shadow-lg">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[#1D4ED8]">PharmaTrack</h1>
-          <p className="text-gray-500 text-sm mt-1">Pharmacy Inventory System</p>
-        </div>
+<div className="text-center mb-8">
+  <h1 className="text-3xl font-bold text-[#1D4ED8]">PamiPharma</h1>
+  <p className="text-gray-500 text-sm mt-1">Inventory System</p>
+</div>
 
         <form onSubmit={handleLogin}>
           <div className="mb-4">

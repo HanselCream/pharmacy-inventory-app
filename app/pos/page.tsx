@@ -476,7 +476,7 @@ export default function POSPage() {
           <div className="bg-card border border-border rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 space-y-4">
               <div className="text-center border-b border-border pb-4">
-                <h3 className="text-2xl font-bold text-primary mb-2">PharmaTrack</h3>
+                <h3 className="text-2xl font-bold text-primary mb-2">PamiPharma</h3>
                 <p className="text-xs text-muted-foreground">Receipt</p>
                 <p className="text-sm font-mono text-foreground mt-2">{receipt.orderNumber}</p>
               </div>

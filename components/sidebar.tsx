@@ -49,10 +49,10 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 bg-sidebar border-r border-sidebar-border h-screen flex flex-col">
-      <div className="p-6 border-b border-sidebar-border">
-        <h1 className="text-2xl font-bold text-primary">PharmaTrack</h1>
-        <p className="text-xs text-muted-foreground mt-1">Pharmacy System</p>
-      </div>
+<div className="p-6 border-b border-sidebar-border">
+  <h1 className="text-2xl font-bold text-primary">PamiPharma</h1>
+  <p className="text-xs text-muted-foreground mt-1">Inventory System</p>
+</div>
 
       <nav className="flex-1 p-4 space-y-1">
         {navItems.map((item) => {
