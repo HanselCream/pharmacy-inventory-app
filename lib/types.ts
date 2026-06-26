@@ -20,9 +20,10 @@ export interface Sale {
   unit_price: number;
   total_amount: number;
   sale_date: string;
-  cashier_name?: string;
+  cashier_name?: string;  // ← Add this
+  user_id?: string;       // ← Add this if using users table
+  payment_method?: string;  // ← Add this
   created_at: string;
-  medicine?: Medicine;
 }
 
 export interface Purchase {
@@ -31,11 +32,11 @@ export interface Purchase {
   quantity_purchased: number;
   unit_cost: number;
   total_cost: number;
-  supplier_name: string | null;
+  supplier_name?: string;
   purchase_date: string;
-  received_date: string | null;
+  received_date?: string;
+  user_id?: string;       // ← Add this if using users table
   created_at: string;
-  medicine?: Medicine;
 }
 
 export interface Disposal {

@@ -7,7 +7,13 @@ import { Sale } from '@/lib/types';
 import { Search, Calendar } from 'lucide-react';
 
 interface SaleWithMedicineName extends Sale {
-  medicineName?: string;
+  medicineName: string;
+}
+
+interface MedicineName {
+  id: string;
+  brand_name: string;
+  generic_name: string;
 }
 
 export default function SalesPage() {
@@ -36,19 +42,30 @@ export default function SalesPage() {
       
       // Fetch medicine names for each sale
       const supabase = createClient();
-      const medicineIds = [...new Set(data.map(s => s.medicine_id))];
+      const medicineIds = [...new Set(data.map((s: Sale) => s.medicine_id))];
       
       const { data: medicines } = await supabase
         .from('medicines')
         .select('id, brand_name, generic_name')
         .in('id', medicineIds);
       
-      const medicineMap = new Map(medicines?.map(m => [m.id, `${m.brand_name} (${m.generic_name})`]) || []);
+      // Create a Map with string keys and string values
+      const medicineMap = new Map<string, string>();
       
-      const enrichedSales = data.map(sale => ({
-        ...sale,
-        medicineName: medicineMap.get(sale.medicine_id) || 'Unknown Medicine'
-      }));
+      if (medicines) {
+        medicines.forEach((m: MedicineName) => {
+          medicineMap.set(m.id, `${m.brand_name} (${m.generic_name})`);
+        });
+      }
+      
+      // Map sales with medicine names - using explicit type
+      const enrichedSales: SaleWithMedicineName[] = data.map((sale: Sale) => {
+        const name = medicineMap.get(sale.medicine_id);
+        return {
+          ...sale,
+          medicineName: name || 'Unknown Medicine'
+        };
+      });
       
       setSales(enrichedSales);
     } catch (error) {
@@ -142,6 +159,8 @@ export default function SalesPage() {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Quantity</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Unit Price</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Total</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-foreground">Payment</th>
+
                   </tr>
                 </thead>
                 <tbody>
@@ -152,18 +171,27 @@ export default function SalesPage() {
                           {new Date(sale.sale_date).toLocaleString()}
                         </td>
                         <td className="px-6 py-4 text-sm">
-                          <div className="font-medium text-foreground">{sale.medicineName || 'Unknown Medicine'}</div>
+                          <div className="font-medium text-foreground">{sale.medicineName}</div>
                         </td>
                         <td className="px-6 py-4 text-sm text-foreground">{sale.quantity_sold}</td>
                         <td className="px-6 py-4 text-sm text-foreground">₱{sale.unit_price.toFixed(2)}</td>
                         <td className="px-6 py-4 text-sm font-semibold text-foreground">
                           ₱{sale.total_amount.toFixed(2)}
                         </td>
+                         <td className="px-6 py-4 text-sm">
+          <span className={`px-2 py-1 rounded text-xs font-medium ${
+            sale.payment_method === 'online' 
+              ? 'bg-blue-100 text-blue-700' 
+              : 'bg-green-100 text-green-700'
+          }`}>
+            {sale.payment_method === 'online' ? '📱 QR' : '💵 Cash'}
+          </span>
+        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
+                      <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                         No sales found
                       </td>
                     </tr>

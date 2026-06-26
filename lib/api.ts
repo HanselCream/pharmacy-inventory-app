@@ -56,6 +56,7 @@ export const fetchMedicines = async (filters?: {
   category?: string;
   page?: number;
   limit?: number;
+  sortBy?: 'expiry_asc' | 'expiry_desc' | 'name_asc' | 'name_desc' | 'status_asc' | 'status_desc';
 }): Promise<{ medicines: Medicine[]; total: number }> => {
   const supabase = createClient();
   const limit = filters?.limit || 10;
@@ -74,9 +75,38 @@ export const fetchMedicines = async (filters?: {
     query = query.eq('category', filters.category);
   }
 
-  const { data, count, error } = await query
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1);
+  if (filters?.sortBy) {
+    switch (filters.sortBy) {
+      case 'expiry_asc':
+        query = query.order('expiry_date', { ascending: true, nullsFirst: false });
+        break;
+      case 'expiry_desc':
+        query = query.order('expiry_date', { ascending: false, nullsFirst: true });
+        break;
+      case 'name_asc':
+        query = query.order('brand_name', { ascending: true });
+        break;
+      case 'name_desc':
+        query = query.order('brand_name', { ascending: false });
+        break;
+      case 'status_asc':
+        query = query
+          .order('expiry_date', { ascending: true, nullsFirst: false })
+          .order('quantity_on_hand', { ascending: false });
+        break;
+      case 'status_desc':
+        query = query
+          .order('expiry_date', { ascending: false, nullsFirst: true })
+          .order('quantity_on_hand', { ascending: true });
+        break;
+      default:
+        query = query.order('created_at', { ascending: false });
+    }
+  } else {
+    query = query.order('created_at', { ascending: false });
+  }
+
+  const { data, count, error } = await query.range(offset, offset + limit - 1);
 
   if (error) throw error;
   return { medicines: data || [], total: count || 0 };
@@ -122,18 +152,24 @@ export const updateMedicine = async (
   return data;
 };
 
-export const recordSale = async (sale: Omit<Sale, 'id' | 'created_at'>): Promise<Sale> => {
+export const recordSale = async (
+  sale: Omit<Sale, 'id' | 'created_at'> & { payment_method?: string }
+): Promise<Sale> => {
   const supabase = createClient();
+  
+  const saleData = {
+    ...sale,
+    payment_method: sale.payment_method || 'cash',
+  };
   
   const { data, error } = await supabase
     .from('sales')
-    .insert([sale])
+    .insert([saleData])
     .select()
     .single();
 
   if (error) throw error;
 
-  // Deduct from inventory
   const medicine = await fetchMedicineById(sale.medicine_id);
   await updateMedicine(sale.medicine_id, {
     quantity_on_hand: Math.max(0, medicine.quantity_on_hand - sale.quantity_sold),
@@ -155,7 +191,6 @@ export const recordPurchase = async (
 
   if (error) throw error;
 
-  // Add to inventory
   const medicine = await fetchMedicineById(purchase.medicine_id);
   await updateMedicine(purchase.medicine_id, {
     quantity_on_hand: medicine.quantity_on_hand + purchase.quantity_purchased,
@@ -177,7 +212,6 @@ export const recordDisposal = async (
 
   if (error) throw error;
 
-  // Deduct from inventory
   const medicine = await fetchMedicineById(disposal.medicine_id);
   await updateMedicine(disposal.medicine_id, {
     quantity_on_hand: Math.max(0, medicine.quantity_on_hand - disposal.quantity_disposed),
@@ -202,23 +236,26 @@ export const fetchDashboardStats = async (): Promise<DashboardStats> => {
 
   if (salesError) throw new Error('sales: ' + salesError.message);
 
-  const medicinesArray = medicines || [];
-  const salesArray = sales || [];
+  const medicinesArray: Medicine[] = medicines || [];
+  const salesArray: Sale[] = sales || [];
 
   const lowStockItems = medicinesArray.filter(
-    (m) => m.quantity_on_hand <= m.reorder_level
+    (m: Medicine) => m.quantity_on_hand <= m.reorder_level
   ).length;
 
   const expiredItems = medicinesArray.filter(
-    (m) => m.expiry_date && new Date(m.expiry_date) < new Date()
+    (m: Medicine) => m.expiry_date && new Date(m.expiry_date) < new Date()
   ).length;
 
   const totalInventoryValue = medicinesArray.reduce(
-    (sum, m) => sum + m.quantity_on_hand * m.unit_price,
+    (sum: number, m: Medicine) => sum + m.quantity_on_hand * m.unit_price,
     0
   );
 
-  const todaySalesAmount = salesArray.reduce((sum, s) => sum + s.total_amount, 0);
+  const todaySalesAmount = salesArray.reduce(
+    (sum: number, s: Sale) => sum + s.total_amount, 
+    0
+  );
 
   return {
     totalMedicines: medicinesArray.length,
@@ -266,6 +303,9 @@ export const fetchCategories = async (): Promise<string[]> => {
 
   if (error) throw error;
 
-  const unique = [...new Set(data?.map((m) => m.category).filter(Boolean))];
-  return unique.sort();
+  const categories: string[] = (data || [])
+    .map((item: { category: string }) => item.category)
+    .filter((category: string | null): category is string => Boolean(category));
+
+  return [...new Set(categories)].sort();
 };
