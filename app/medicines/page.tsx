@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { fetchMedicines, fetchCategories, createMedicine, updateMedicine, recordPurchase } from '@/lib/api';
+import { createClient } from '@/lib/supabase/client';
 import { Medicine } from '@/lib/types';
 import { Search, Plus, Edit2, Trash2, AlertTriangle, Calendar, Package, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -9,6 +10,17 @@ import { toast } from 'sonner';
 export default function MedicinesPage() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [total, setTotal] = useState(0);
+const generateNextMedicineCode = (medicines: Medicine[]) => {
+  const maxNumber = medicines
+    .map((m) => {
+      const match = m.code?.match(/^MED(\d+)$/i);
+      return match ? Number(match[1]) : 0;
+    })
+    .reduce((max, current) => Math.max(max, current), 0);
+
+  return `MED${String(maxNumber + 1).padStart(3, "0")}`;
+};
+
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [categories, setCategories] = useState<string[]>([]);
@@ -23,6 +35,9 @@ const [sortBy, setSortBy] = useState<'expiry_asc' | 'expiry_desc' | 'name_asc' |
   const [editingId, setEditingId] = useState<string | null>(null);
   
   // Stock Arrival states
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+  const [categoryError, setCategoryError] = useState('');
   const [showStockArrival, setShowStockArrival] = useState(false);
   const [stockArrivalData, setStockArrivalData] = useState({
     medicine_id: '',
@@ -56,18 +71,75 @@ const loadMedicines = async () => {
     }
   };
 
-  const loadCategories = async () => {
-    try {
-      const cats = await fetchCategories();
-      setCategories(cats);
-    } catch (error) {
-      console.error('Error loading categories:', error);
-    }
-  };
+const loadCategories = async () => {
+  try {
+    const cats = await fetchCategories();
+    setCategories(cats);
+  } catch (error) {
+    console.error('Error loading categories:', error);
+  }
+};
+
+const handleAddCategory = () => {
+  const trimmed = newCategory.trim();
+  if (!trimmed) {
+    setCategoryError('Category name cannot be empty');
+    return;
+  }
+  const isDuplicate = categories.some(
+    c => c.toLowerCase() === trimmed.toLowerCase()
+  );
+  if (isDuplicate) {
+    setCategoryError(`"${trimmed}" already exists`);
+    return;
+  }
+  setCategories([...categories, trimmed].sort());
+  setNewCategory('');
+  setCategoryError('');
+  toast.success(`Category "${trimmed}" added`);
+};
+
+const handleDeleteCategory = (cat: string) => {
+  const inUse = medicines.some(m => m.category === cat);
+  if (inUse) {
+    toast.error(`Cannot delete "${cat}" — it's used by existing medicines`);
+    return;
+  }
+  setCategories(categories.filter(c => c !== cat));
+  toast.success(`Category "${cat}" deleted`);
+};
 
   // ====== Medicine CRUD ======
-  const handleSave = async () => {
-    try {
+const handleSave = async () => {
+  if (!formData.code) {
+    toast.error('Batch/Lot No. is required');
+    return;
+  }
+  if (!formData.generic_name) {
+    toast.error('Generic Name is required');
+    return;
+  }
+  if (!formData.brand_name) {
+    toast.error('Brand Name is required');
+    return;
+  }
+if (!formData.category) {
+    toast.error('Category is required');
+    return;
+  }
+  if (!formData.unit_price) {
+    toast.error('Unit Price is required');
+    return;
+  }
+  if (!formData.quantity_on_hand) {
+    toast.error('Quantity is required');
+    return;
+  }
+  if (!formData.expiry_date) {
+    toast.error('Expiry Date is required');
+    return;
+  }
+  try {
       if (editingId) {
         await updateMedicine(editingId, formData);
         toast.success('Medicine updated successfully');
@@ -79,10 +151,15 @@ const loadMedicines = async () => {
       setFormData({});
       setEditingId(null);
       loadMedicines();
-    } catch (error) {
-      console.error('Error saving medicine:', error);
-      toast.error('Error saving medicine');
-    }
+    } catch (error: any) {
+  console.error(error);
+  console.error(error?.message);
+  console.error(error?.details);
+  console.error(error?.hint);
+  console.error(error?.code);
+
+  toast.error(error?.message || 'Error saving medicine');
+}
   };
 
   const handleEdit = (medicine: Medicine) => {
@@ -92,17 +169,25 @@ const loadMedicines = async () => {
     setShowStockArrival(false);
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Are you sure you want to delete "${name}"?`)) {
-      try {
-        toast.success(`"${name}" deleted successfully`);
-        loadMedicines();
-      } catch (error) {
-        console.error('Error deleting medicine:', error);
-        toast.error('Error deleting medicine');
-      }
+const handleDelete = async (id: string, name: string) => {
+  if (confirm(`Are you sure you want to delete "${name}"?`)) {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('medicines')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success(`"${name}" deleted successfully`);
+      loadMedicines();
+    } catch (error) {
+      console.error('Error deleting medicine:', error);
+      toast.error('Error deleting medicine');
     }
-  };
+  }
+};
 
   // ====== Stock Arrival ======
   const handleStockArrival = async () => {
@@ -137,7 +222,7 @@ const loadMedicines = async () => {
     }
   };
 
-  const isLowStock = (med: Medicine) => med.quantity_on_hand <= 10;
+const isLowStock = (med: Medicine) => med.quantity_on_hand <= med.reorder_level;
   const isExpired = (med: Medicine) => med.expiry_date && new Date(med.expiry_date) < new Date();
 
   const selectedMedicine = medicines.find(m => m.id === stockArrivalData.medicine_id);
@@ -160,12 +245,22 @@ const loadMedicines = async () => {
             <Package size={20} /> Stock Arrival
           </button>
           <button
-            onClick={() => {
-              setShowForm(!showForm);
-              setShowStockArrival(false);
-              setFormData({});
-              setEditingId(null);
-            }}
+onClick={async () => {
+    setShowStockArrival(false);
+    setEditingId(null);
+
+    // Load ALL medicines
+    const { medicines: allMedicines } = await fetchMedicines({
+        page: 1,
+        limit: 10000,
+    });
+
+    setFormData({
+        code: generateNextMedicineCode(allMedicines),
+    });
+
+    setShowForm(true);
+}}
             className="bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:opacity-90 transition flex items-center gap-2"
           >
             <Plus size={20} /> Add Medicine
@@ -202,8 +297,76 @@ const loadMedicines = async () => {
               {cat}
             </option>
           ))}
-        </select>
+ </select>
       </div>
+
+      {/* ====== Category Manager Modal ====== */}
+      {showCategoryManager && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
+    <div className="bg-card border border-border rounded-lg p-6 w-full max-w-md">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-bold text-foreground">Manage Categories</h2>
+        <button
+          onClick={() => {
+            setShowCategoryManager(false);
+            setNewCategory('');
+            setCategoryError('');
+          }}
+          className="text-muted-foreground hover:text-foreground transition"
+        >
+          <X size={20} />
+        </button>
+      </div>
+
+      {/* Add new category */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-foreground mb-1">Add New Category</label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="e.g. Vitamins"
+            value={newCategory}
+            onChange={(e) => {
+              setNewCategory(e.target.value);
+              setCategoryError('');
+            }}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleAddCategory(); }}
+            className="flex-1 px-3 py-2 bg-background border border-border rounded text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <button
+            onClick={handleAddCategory}
+            className="bg-primary text-primary-foreground px-3 py-2 rounded hover:opacity-90 transition text-sm"
+          >
+            Add
+          </button>
+        </div>
+        {categoryError && (
+          <p className="text-destructive text-xs mt-1">{categoryError}</p>
+        )}
+      </div>
+
+      {/* Category list */}
+      <div className="space-y-1 max-h-64 overflow-y-auto">
+        {categories.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No categories yet</p>
+        ) : (
+          categories.map((cat) => (
+            <div key={cat} className="flex justify-between items-center px-3 py-2 bg-background border border-border rounded">
+              <span className="text-sm text-foreground">{cat}</span>
+              <button
+                onClick={() => handleDeleteCategory(cat)}
+                className="text-destructive hover:opacity-70 transition"
+                title="Delete category"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  </div>
+)}
 
       {/* ====== Stock Arrival Form ====== */}
       {showStockArrival && (
@@ -329,14 +492,13 @@ const loadMedicines = async () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Code */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Code *</label>
-              <input
-                type="text"
-                placeholder="e.g. MED001"
-                value={formData.code || ''}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                className="w-full px-3 py-2 bg-background border border-border rounded text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+              <label className="block text-sm font-medium text-foreground mb-1">Batch/Lot No. *</label>
+<input
+  type="text"
+  value={formData.code || ''}
+  readOnly
+  className="w-full px-3 py-2 bg-muted border border-border rounded text-foreground cursor-not-allowed"
+/>
             </div>
 
             {/* Generic Name */}
@@ -363,17 +525,29 @@ const loadMedicines = async () => {
               />
             </div>
 
-            {/* Category */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Category</label>
-              <input
-                type="text"
-                placeholder="e.g. Antibiotics"
-                value={formData.category || ''}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-3 py-2 bg-background border border-border rounded text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
+{/* Category */}
+<div>
+  <div className="flex items-center justify-between mb-1">
+    <label className="block text-sm font-medium text-foreground">Category</label>
+    <button
+      type="button"
+      onClick={() => setShowCategoryManager(true)}
+      className="text-xs text-primary hover:underline"
+    >
+      Manage
+    </button>
+  </div>
+  <select
+    value={formData.category || ''}
+    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+    className="w-full px-3 py-2 bg-background border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+  >
+    <option value="">Select category</option>
+    {categories.map((cat) => (
+      <option key={cat} value={cat}>{cat}</option>
+    ))}
+  </select>
+</div>
 
             {/* Unit Price */}
             <div>
@@ -414,7 +588,7 @@ const loadMedicines = async () => {
 
             {/* Expiry Date */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Expiry Date</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Expiry Date *</label>
               <input
                 type="date"
                 value={formData.expiry_date || ''}
@@ -475,7 +649,7 @@ const loadMedicines = async () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-background">
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Code</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Batch/Lot No.</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Name</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Category</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Price</th>

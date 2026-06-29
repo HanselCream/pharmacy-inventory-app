@@ -10,6 +10,14 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showAllLowStock, setShowAllLowStock] = useState(false);
   const [showAllExpiring, setShowAllExpiring] = useState(false);
+const [expiryMonths, setExpiryMonths] = useState(() => {
+  if (typeof window !== 'undefined') {
+    return parseInt(localStorage.getItem('expiryWarningMonths') || '3');
+  }
+  return 3;
+});
+const [editingMonths, setEditingMonths] = useState(false);
+const [tempMonths, setTempMonths] = useState(expiryMonths);
 
   useEffect(() => {
     loadMedicines();
@@ -28,19 +36,19 @@ export default function Dashboard() {
   };
 
   const now = new Date();
-  const threeMonthsLater = new Date();
-  threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+const expiryLimit = new Date();
+expiryLimit.setMonth(expiryLimit.getMonth() + expiryMonths);
 
-  const expiringSoon = medicines
-    .filter(med => {
-      if (!med.expiry_date) return false;
-      const expiryDate = new Date(med.expiry_date);
-      return expiryDate >= now && expiryDate <= threeMonthsLater;
-    })
+const expiringSoon = medicines
+  .filter(med => {
+    if (!med.expiry_date) return false;
+    const expiryDate = new Date(med.expiry_date);
+    return expiryDate >= now && expiryDate <= expiryLimit;
+  })
     .sort((a, b) => new Date(a.expiry_date!).getTime() - new Date(b.expiry_date!).getTime());
 
-  const lowStockItems = medicines
-    .filter(med => med.quantity_on_hand <= 10)
+const lowStockItems = medicines
+  .filter(med => med.quantity_on_hand <= med.reorder_level)
     .sort((a, b) => a.quantity_on_hand - b.quantity_on_hand);
 
   const displayedLowStock = showAllLowStock ? lowStockItems : lowStockItems.slice(0, 5);
@@ -48,7 +56,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center h-screen">
+      <div className="p-8 flex items-start justify-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
@@ -64,30 +72,39 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Low Stock Card */}
         <div className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">⚠️ Low Stock Items</p>
-              <p className="text-4xl font-bold text-foreground">{lowStockItems.length}</p>
-              <p className="text-sm text-muted-foreground mt-1">10 or fewer units left</p>
-            </div>
-            <AlertTriangle className="w-12 h-12 text-accent opacity-20" />
-          </div>
+<div className="flex items-start justify-between mb-4 min-h-[92px]">
+  <div>
+    <p className="text-sm text-muted-foreground mb-1">⚠️ Low Stock Items</p>
+
+    <p className="text-4xl font-bold text-foreground">
+      {lowStockItems.length}
+    </p>
+
+    {/* Placeholder to match Expiring Soon height */}
+    <div className="h-6" />
+  </div>
+
+  <AlertTriangle className="w-12 h-12 text-red-400 opacity-60" />
+</div>
           
           {lowStockItems.length > 0 ? (
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {displayedLowStock.map((med) => (
-                <div key={med.id} className="flex justify-between items-center p-3 bg-background rounded border border-border">
-                  <div>
-                    <span className="text-sm font-medium text-foreground">{med.brand_name}</span>
-                    <span className="text-xs text-muted-foreground ml-2">({med.code})</span>
-                  </div>
-                  <span className="text-sm font-bold text-accent">{med.quantity_on_hand} left</span>
-                </div>
+<div
+  key={med.id}
+  className="flex justify-between items-center p-3 bg-red-50 rounded border border-red-200"
+>
+  <div>
+    <span className="text-sm font-medium text-foreground">{med.brand_name}</span>
+    <span className="text-xs text-muted-foreground ml-2">({med.code})</span>
+  </div>
+  <span className="text-sm font-bold text-red-600">{med.quantity_on_hand} left</span>
+</div>
               ))}
               {lowStockItems.length > 5 && (
                 <button
                   onClick={() => setShowAllLowStock(!showAllLowStock)}
-                  className="w-full text-center text-sm text-primary hover:underline py-2 flex items-center justify-center gap-1"
+                  className="w-full text-center text-sm text-primary hover:underline py-2 flex items-start justify-center gap-1"
                 >
                   {showAllLowStock ? (
                     <>Show Less <ChevronUp size={16} /></>
@@ -104,24 +121,59 @@ export default function Dashboard() {
 
         {/* Expiring Soon Card */}
         <div className="bg-card border border-border rounded-lg p-6 hover:shadow-lg transition">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-start justify-between mb-4 min-h-[92px]">
             <div>
               <p className="text-sm text-muted-foreground mb-1">📅 Expiring Soon</p>
               <p className="text-4xl font-bold text-foreground">{expiringSoon.length}</p>
-              <p className="text-sm text-muted-foreground mt-1">Within 3 months</p>
+              <div className="flex items-start gap-2 mt-1">
+  {editingMonths ? (
+    <>
+      <input
+        type="number"
+        min="1"
+        max="24"
+        value={tempMonths}
+        onChange={(e) => setTempMonths(parseInt(e.target.value) || 1)}
+        className="w-14 px-1 py-0.5 border border-border rounded text-xs text-foreground bg-background"
+      />
+      <span className="text-xs text-muted-foreground">months</span>
+      <button
+        onClick={() => {
+          const val = Math.min(24, Math.max(1, tempMonths));
+          setExpiryMonths(val);
+          localStorage.setItem('expiryWarningMonths', String(val));
+          setEditingMonths(false);
+        }}
+        className="text-xs text-primary hover:underline"
+      >Save</button>
+      <button
+        onClick={() => { setTempMonths(expiryMonths); setEditingMonths(false); }}
+        className="text-xs text-muted-foreground hover:underline"
+      >Cancel</button>
+    </>
+  ) : (
+    <>
+      <p className="text-sm text-muted-foreground">Within {expiryMonths} month{expiryMonths !== 1 ? 's' : ''}</p>
+      <button
+        onClick={() => { setTempMonths(expiryMonths); setEditingMonths(true); }}
+        className="text-xs text-primary hover:underline"
+      >Edit</button>
+    </>
+  )}
+</div>
             </div>
-            <Calendar className="w-12 h-12 text-secondary opacity-20" />
+            <Calendar className="w-12 h-12 text-orange-400 opacity-60" />
           </div>
           
           {expiringSoon.length > 0 ? (
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {displayedExpiring.map((med) => (
-                <div key={med.id} className="flex justify-between items-center p-3 bg-background rounded border border-border">
-                  <div>
-                    <span className="text-sm font-medium text-foreground">{med.brand_name}</span>
-                    <span className="text-xs text-muted-foreground ml-2">({med.code})</span>
-                  </div>
-                  <span className="text-sm font-bold text-secondary">
+<div key={med.id} className="flex justify-between items-center p-3 bg-orange-50 rounded border border-orange-200">
+  <div>
+    <span className="text-sm font-medium text-foreground">{med.brand_name}</span>
+    <span className="text-xs text-muted-foreground ml-2">({med.code})</span>
+  </div>
+  <span className="text-sm font-bold text-orange-600">
                     {med.expiry_date 
                       ? new Date(med.expiry_date).toLocaleDateString('en-PH', { 
                           month: 'short', 
