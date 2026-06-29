@@ -26,14 +26,16 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    const data = await response.json();
+const data = await response.json();
 
-    if (!data || data.length === 0) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
-    }
+console.log('Supabase response:', JSON.stringify(data));
+
+if (!data || data.length === 0) {
+  return NextResponse.json(
+    { error: 'Invalid credentials' },
+    { status: 401 }
+  );
+}
 
     const user = data[0];
 
