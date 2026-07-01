@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { fetchMedicines, fetchCategories, createMedicine, updateMedicine, recordPurchase } from '@/lib/api';
-import { createClient } from '@/lib/supabase/client';
 import { Medicine } from '@/lib/types';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { createClient } from '@/lib/supabase/client';
 import { Search, Plus, Edit2, Trash2, AlertTriangle, Calendar, Package, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MedicinesPage() {
+  const { user } = useCurrentUser();
+  const isAdmin = user?.role === 'admin';
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [total, setTotal] = useState(0);
 const generateNextMedicineCode = (medicines: Medicine[]) => {
@@ -27,8 +30,7 @@ const generateNextMedicineCode = (medicines: Medicine[]) => {
 const [page, setPage] = useState(1);
 const [limit, setLimit] = useState(10);
   const [loading, setLoading] = useState(true);
-const [sortBy, setSortBy] = useState<'expiry_asc' | 'expiry_desc' | 'name_asc' | 'name_desc' | 'status_asc' | 'status_desc'>('expiry_asc');
-  
+const [sortBy, setSortBy] = useState<'expiry_asc' | 'expiry_desc' | 'name_asc' | 'name_desc' | 'status_asc' | 'status_desc' | 'code_asc' | 'code_desc'>('code_asc');  
   // Add/Edit Form states
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<Partial<Medicine>>({});
@@ -129,6 +131,10 @@ if (!formData.category) {
   }
   if (!formData.unit_price) {
     toast.error('Unit Price is required');
+    return;
+  }
+  if (formData.cost_price === undefined || formData.cost_price === null) {
+    toast.error('Purchase Price is required');
     return;
   }
   if (!formData.quantity_on_hand) {
@@ -549,7 +555,7 @@ onClick={async () => {
   </select>
 </div>
 
-            {/* Unit Price */}
+{/* Unit Price */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Unit Price (₱) *</label>
               <input
@@ -558,6 +564,24 @@ onClick={async () => {
                 step="0.01"
                 value={formData.unit_price || ''}
                 onChange={(e) => setFormData({ ...formData, unit_price: parseFloat(e.target.value) })}
+                className="w-full px-3 py-2 bg-background border border-border rounded text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+           {/* Purchase Price (Cost) */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Purchase Price (₱) *</label>
+              <input
+                type="number"
+                placeholder="e.g. 4.20"
+                step="0.01"
+                value={formData.cost_price ?? ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    cost_price: e.target.value === '' ? null : parseFloat(e.target.value),
+                  })
+                }
                 className="w-full px-3 py-2 bg-background border border-border rounded text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
@@ -649,12 +673,22 @@ onClick={async () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-background">
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Batch/Lot No.</th>
+                    <th
+                      onClick={() => { setSortBy(sortBy === 'code_asc' ? 'code_desc' : 'code_asc'); setPage(1); }}
+                      className="px-4 py-3 text-left text-sm font-semibold text-foreground cursor-pointer hover:text-primary transition select-none whitespace-nowrap"
+                    >
+                      Batch/Lot No. {sortBy === 'code_asc' ? '↑' : sortBy === 'code_desc' ? '↓' : ''}
+                    </th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Name</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Category</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Price</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Stock</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">Expiry</th>
+                    <th
+                      onClick={() => { setSortBy(sortBy === 'expiry_asc' ? 'expiry_desc' : 'expiry_asc'); setPage(1); }}
+                      className="px-4 py-3 text-left text-sm font-semibold text-foreground cursor-pointer hover:text-primary transition select-none whitespace-nowrap"
+                    >
+                      Expiry {sortBy === 'expiry_asc' ? '↑' : sortBy === 'expiry_desc' ? '↓' : ''}
+                    </th>
                     <th onClick={() => {
                           const newSort = sortBy === 'status_asc' ? 'status_desc' : 'status_asc';
                           setSortBy(newSort);

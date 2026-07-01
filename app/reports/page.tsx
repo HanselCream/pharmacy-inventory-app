@@ -64,11 +64,15 @@ export default function ReportsPage() {
         salesMap[med.id] = { name: med.brand_name, quantity: 0, revenue: 0, profit: 0 };
       });
 
-      filteredSales.forEach((sale) => {
+filteredSales.forEach((sale) => {
         if (salesMap[sale.medicine_id]) {
+          const medicine = medsData.find((m) => m.id === sale.medicine_id);
+          const costPrice = medicine?.cost_price ?? 0;
+          const itemProfit = (sale.unit_price - costPrice) * sale.quantity_sold;
+
           salesMap[sale.medicine_id].quantity += sale.quantity_sold;
           salesMap[sale.medicine_id].revenue += sale.total_amount;
-          salesMap[sale.medicine_id].profit += sale.total_amount * 0.3;
+          salesMap[sale.medicine_id].profit += itemProfit;
         }
       });
 
@@ -111,8 +115,13 @@ export default function ReportsPage() {
   }, [loadReportData]);
 
   // Calculate totals based on filtered sales
+// Calculate totals based on filtered sales (real cost-based profit)
   const totalRevenue = sales.reduce((sum, s) => sum + s.total_amount, 0);
-  const totalProfit = totalRevenue * 0.3;
+  const totalCost = sales.reduce((sum, s) => {
+    const medicine = medicines.find((m) => m.id === s.medicine_id);
+    return sum + (medicine?.cost_price ?? 0) * s.quantity_sold;
+  }, 0);
+  const totalProfit = totalRevenue - totalCost;
   const totalItemsSold = sales.reduce((sum, s) => sum + s.quantity_sold, 0);
   const avgTransaction = sales.length > 0 ? totalRevenue / sales.length : 0;
 
@@ -159,8 +168,9 @@ export default function ReportsPage() {
       ['SUMMARY STATISTICS'],
       ['Time Range', timeRange],
       ['Payment Filter', paymentFilter],
-      ['Total Revenue', totalRevenue.toFixed(2)],
-      ['Estimated Profit (30%)', totalProfit.toFixed(2)],
+['Total Revenue', totalRevenue.toFixed(2)],
+      ['Total Cost', totalCost.toFixed(2)],
+      ['Net Profit', totalProfit.toFixed(2)],
       ['Total Items Sold', totalItemsSold],
       ['Average Transaction', avgTransaction.toFixed(2)],
       ['Total Transactions', sales.length],
@@ -172,7 +182,7 @@ export default function ReportsPage() {
       ['Total', breakdown.total.toFixed(2), breakdown.cashCount + breakdown.qrCount],
       [],
       ['TOP SELLING MEDICINES'],
-      ['Medicine Name', 'Quantity Sold', 'Revenue', 'Estimated Profit'],
+      ['Medicine Name', 'Quantity Sold', 'Revenue', 'Profit'],
       ...chartData.map((item) => [item.name, item.quantity, item.revenue.toFixed(2), item.profit.toFixed(2)]),
       [],
       ['CATEGORY BREAKDOWN'],
@@ -282,10 +292,10 @@ export default function ReportsPage() {
           <p className="text-sm text-muted-foreground mb-1">Total Revenue</p>
           <p className="text-2xl font-bold text-green-600">₱{totalRevenue.toFixed(2)}</p>
         </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground mb-1">Est. Profit</p>
+<div className="bg-card border border-border rounded-lg p-4">
+          <p className="text-sm text-muted-foreground mb-1">Net Profit</p>
           <p className="text-2xl font-bold text-primary">₱{totalProfit.toFixed(2)}</p>
-          <p className="text-xs text-muted-foreground">~30% margin</p>
+          <p className="text-xs text-muted-foreground">Total Cost: ₱{totalCost.toFixed(2)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-sm text-muted-foreground mb-1">Items Sold</p>

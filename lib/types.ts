@@ -5,6 +5,7 @@ export interface Medicine {
   brand_name: string;
   category: string;
   unit_price: number;
+  cost_price: number | null;
   quantity_on_hand: number;
   reorder_level: number;
   expiry_date: string | null;

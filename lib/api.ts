@@ -56,7 +56,7 @@ export const fetchMedicines = async (filters?: {
   category?: string;
   page?: number;
   limit?: number;
-  sortBy?: 'expiry_asc' | 'expiry_desc' | 'name_asc' | 'name_desc' | 'status_asc' | 'status_desc';
+  sortBy?: 'expiry_asc' | 'expiry_desc' | 'name_asc' | 'name_desc' | 'status_asc' | 'status_desc' | 'code_asc' | 'code_desc';
 }): Promise<{ medicines: Medicine[]; total: number }> => {
   const supabase = createClient();
   const limit = filters?.limit || 10;
@@ -98,6 +98,12 @@ export const fetchMedicines = async (filters?: {
         query = query
           .order('expiry_date', { ascending: false, nullsFirst: true })
           .order('quantity_on_hand', { ascending: true });
+        break;
+      case 'code_asc':
+        query = query.order('code', { ascending: true });
+        break;
+      case 'code_desc':
+        query = query.order('code', { ascending: false });
         break;
       default:
         query = query.order('created_at', { ascending: false });
