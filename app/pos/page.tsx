@@ -29,6 +29,7 @@ export default function POSPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState('');
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const searchReqId = useRef(0);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -42,16 +43,17 @@ export default function POSPage() {
     loadMedicines(true);
   }, []);
 
-  const loadMedicines = async (showLoader = false) => {
+const loadMedicines = async (showLoader = false, searchValue = search) => {
+    const reqId = ++searchReqId.current;
     try {
       if (showLoader) setLoading(true);
-      const { medicines: data } = await fetchMedicines({ limit: 100, search });
-      setMedicines(data);
+      const { medicines: data } = await fetchMedicines({ limit: 100, search: searchValue });
+      if (reqId === searchReqId.current) setMedicines(data);
     } catch (error) {
       console.error('Error loading medicines:', error);
       toast.error('Failed to load medicines');
     } finally {
-      setLoading(false);
+      if (reqId === searchReqId.current) setLoading(false);
     }
   };
 
@@ -221,11 +223,12 @@ export default function POSPage() {
               placeholder="Search medicines..."
               value={search}
               onChange={(e) => {
-                setSearch(e.target.value);
+                const value = e.target.value;
+                setSearch(value);
                 if (searchTimeout.current) clearTimeout(searchTimeout.current);
                 searchTimeout.current = setTimeout(() => {
-                  loadMedicines();
-                }, 400);
+                  loadMedicines(false, value);
+                }, 250);
               }}
               className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
@@ -233,7 +236,7 @@ export default function POSPage() {
 
           {/* Products Grid */}
           <div className="flex-1 overflow-y-auto p-2">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 items-stretch">
               {loading ? (
                 <div className="col-span-full text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -244,14 +247,14 @@ export default function POSPage() {
                   const availableStock = medicine.quantity_on_hand - inCart;
                   const isOutOfStock = availableStock <= 0;
 
-                  return (
+              return (
                     <div
                       key={medicine.id}
-                      className="bg-card border border-border rounded-lg p-2 hover:shadow-md transition"
+                      className="bg-card border border-border rounded-lg p-2 hover:shadow-md transition flex flex-col h-full"
                     >
-                      <div className="mb-1">
-                        <p className="font-semibold text-foreground text-xs truncate">{medicine.brand_name}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{medicine.generic_name}</p>
+                      <div className="mb-1 flex-1">
+                        <p className="font-semibold text-foreground text-xs leading-tight line-clamp-2">{medicine.brand_name}</p>
+                        <p className="text-[10px] text-muted-foreground leading-tight line-clamp-2">{medicine.generic_name}</p>
                         <p className="text-[10px] text-muted-foreground">
                           Stock: {medicine.quantity_on_hand}
                           {inCart > 0 && <span className="text-accent ml-1">({inCart})</span>}
@@ -261,7 +264,7 @@ export default function POSPage() {
                       <button
                         onClick={() => addToCart(medicine)}
                         disabled={isOutOfStock}
-                        className="w-full bg-primary text-primary-foreground py-1 rounded text-xs hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-primary text-primary-foreground py-1 rounded text-xs hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed mt-auto"
                       >
                         {isOutOfStock ? 'Out of Stock' : 'Add'}
                       </button>

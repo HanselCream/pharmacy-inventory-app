@@ -40,13 +40,10 @@ const [sortBy, setSortBy] = useState<'expiry_asc' | 'expiry_desc' | 'name_asc' |
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [categoryError, setCategoryError] = useState('');
-  const [showStockArrival, setShowStockArrival] = useState(false);
-  const [stockArrivalData, setStockArrivalData] = useState({
-    medicine_id: '',
-    quantity_purchased: 0,
-    unit_cost: 0,
-    supplier_name: '',
-  });
+const [showStockArrival, setShowStockArrival] = useState(false);
+  const [stockSearch, setStockSearch] = useState('');
+  const [restockQuantities, setRestockQuantities] = useState<Record<string, number>>({});
+  const [restockingId, setRestockingId] = useState<string | null>(null);
 
 useEffect(() => {
   loadMedicines();
@@ -196,42 +193,38 @@ const handleDelete = async (id: string, name: string) => {
 };
 
   // ====== Stock Arrival ======
-  const handleStockArrival = async () => {
-    if (!stockArrivalData.medicine_id || stockArrivalData.quantity_purchased <= 0 || stockArrivalData.unit_cost <= 0) {
-      toast.error('Please fill all fields');
+const handleRestock = async (medicine: Medicine) => {
+    const qty = restockQuantities[medicine.id] || 0;
+    if (qty <= 0) {
+      toast.error('Enter quantity to add');
       return;
     }
 
+    setRestockingId(medicine.id);
     try {
       await recordPurchase({
-        medicine_id: stockArrivalData.medicine_id,
-        quantity_purchased: stockArrivalData.quantity_purchased,
-        unit_cost: stockArrivalData.unit_cost,
-        total_cost: stockArrivalData.quantity_purchased * stockArrivalData.unit_cost,
-        supplier_name: stockArrivalData.supplier_name || 'Unknown',
+        medicine_id: medicine.id,
+        quantity_purchased: qty,
+        unit_cost: 0,
+        total_cost: 0,
+        supplier_name: 'Restock',
         purchase_date: new Date().toISOString(),
         received_date: new Date().toISOString(),
       });
 
-      toast.success(`Added ${stockArrivalData.quantity_purchased} units to stock`);
-      setShowStockArrival(false);
-      setStockArrivalData({
-        medicine_id: '',
-        quantity_purchased: 0,
-        unit_cost: 0,
-        supplier_name: '',
-      });
+      toast.success(`Added ${qty} units to ${medicine.brand_name}`);
+      setRestockQuantities((prev) => ({ ...prev, [medicine.id]: 0 }));
       loadMedicines();
     } catch (error) {
       console.error('Error recording purchase:', error);
       toast.error('Error recording stock arrival');
+    } finally {
+      setRestockingId(null);
     }
   };
 
 const isLowStock = (med: Medicine) => med.quantity_on_hand <= med.reorder_level;
   const isExpired = (med: Medicine) => med.expiry_date && new Date(med.expiry_date) < new Date();
-
-  const selectedMedicine = medicines.find(m => m.id === stockArrivalData.medicine_id);
 
   return (
     <div className="p-8 bg-background min-h-screen">
@@ -375,104 +368,64 @@ onClick={async () => {
 )}
 
       {/* ====== Stock Arrival Form ====== */}
-      {showStockArrival && (
+{showStockArrival && (
         <div className="bg-card border border-border rounded-lg p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-foreground">📦 Stock Arrival</h2>
             <button
-              onClick={() => setShowStockArrival(false)}
+              onClick={() => { setShowStockArrival(false); setStockSearch(''); }}
               className="text-muted-foreground hover:text-foreground transition"
             >
               <X size={24} />
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-foreground mb-2">Medicine</label>
-              <select
-                value={stockArrivalData.medicine_id}
-                onChange={(e) => setStockArrivalData({ ...stockArrivalData, medicine_id: e.target.value })}
-                className="w-full px-3 py-2 bg-background border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="">Select Medicine</option>
-                {medicines.map((med) => (
-                  <option key={med.id} value={med.id}>
-                    {med.brand_name} ({med.code}) - Current: {med.quantity_on_hand}
-                  </option>
-                ))}
-              </select>
-            </div>
 
-            <div>
-              <label className="block text-sm text-foreground mb-2">Quantity Added</label>
-              <input
-                type="number"
-                min="1"
-                value={stockArrivalData.quantity_purchased || ''}
-                onChange={(e) =>
-                  setStockArrivalData({ ...stockArrivalData, quantity_purchased: parseInt(e.target.value) || 0 })
-                }
-                className="w-full px-3 py-2 bg-background border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-foreground mb-2">Unit Cost (₱)</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={stockArrivalData.unit_cost || ''}
-                onChange={(e) => setStockArrivalData({ ...stockArrivalData, unit_cost: parseFloat(e.target.value) || 0 })}
-                className="w-full px-3 py-2 bg-background border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-foreground mb-2">Supplier</label>
-              <input
-                type="text"
-                placeholder="Supplier Name"
-                value={stockArrivalData.supplier_name}
-                onChange={(e) => setStockArrivalData({ ...stockArrivalData, supplier_name: e.target.value })}
-                className="w-full px-3 py-2 bg-background border border-border rounded text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-3 text-muted-foreground" size={20} />
+            <input
+              type="text"
+              placeholder="Search medicine by name or code..."
+              value={stockSearch}
+              onChange={(e) => setStockSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            />
           </div>
 
-          {selectedMedicine && stockArrivalData.quantity_purchased > 0 && stockArrivalData.unit_cost > 0 && (
-            <div className="mt-4 bg-primary/10 border border-primary/20 rounded p-3">
-              <p className="text-sm text-muted-foreground">Total Cost</p>
-              <p className="text-2xl font-bold text-primary">
-                ₱{(stockArrivalData.quantity_purchased * stockArrivalData.unit_cost).toFixed(2)}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                New stock will be: {selectedMedicine.quantity_on_hand + stockArrivalData.quantity_purchased}
-              </p>
-            </div>
-          )}
-
-          <div className="flex gap-3 mt-6">
-            <button
-              onClick={handleStockArrival}
-              className="bg-primary text-primary-foreground px-6 py-2 rounded-lg hover:opacity-90 transition"
-            >
-              Add to Stock
-            </button>
-            <button
-              onClick={() => {
-                setShowStockArrival(false);
-                setStockArrivalData({
-                  medicine_id: '',
-                  quantity_purchased: 0,
-                  unit_cost: 0,
-                  supplier_name: '',
-                });
-              }}
-              className="bg-muted text-muted-foreground px-6 py-2 rounded-lg hover:opacity-90 transition"
-            >
-              Cancel
-            </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto">
+            {medicines
+              .filter((m) =>
+                !stockSearch ||
+                m.brand_name.toLowerCase().includes(stockSearch.toLowerCase()) ||
+                m.generic_name.toLowerCase().includes(stockSearch.toLowerCase()) ||
+                m.code.toLowerCase().includes(stockSearch.toLowerCase())
+              )
+              .map((med) => (
+                <div key={med.id} className="border border-border rounded-lg p-3 bg-background">
+                  <p className="text-sm font-semibold text-foreground truncate">{med.brand_name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{med.generic_name} • {med.code}</p>
+                  <p className="text-xs text-muted-foreground">{med.category || '—'}</p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Current Stock: <span className="font-semibold text-foreground">{med.quantity_on_hand}</span>
+                  </p>
+                  <label className="block text-xs font-medium text-primary mb-1">Qty Added</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={restockQuantities[med.id] || ''}
+                    onChange={(e) =>
+                      setRestockQuantities((prev) => ({ ...prev, [med.id]: parseInt(e.target.value) || 0 }))
+                    }
+                    className="w-full px-2 py-1.5 mb-2 bg-card border-2 border-primary rounded text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <button
+                    onClick={() => handleRestock(med)}
+                    disabled={restockingId === med.id}
+                    className="w-full bg-primary text-primary-foreground py-1.5 rounded text-xs font-medium hover:opacity-90 transition disabled:opacity-50"
+                  >
+                    {restockingId === med.id ? 'Adding...' : 'Add Stock'}
+                  </button>
+                </div>
+              ))}
           </div>
         </div>
       )}
