@@ -6,7 +6,7 @@ import { Search, Package, ShoppingBag } from 'lucide-react';
 
 interface Transaction {
   id: string;
-  type: 'sale' | 'stock_add';
+  type: 'sale' | 'new_medicine' | 'stock_add';
   medicine_name: string;
   quantity: number;
   price: number;
@@ -69,19 +69,19 @@ export default function TransactionHistoryPage() {
       });
 
       // Add purchases
-      (purchasesData || []).forEach((purchase: any) => {
-        allTransactions.push({
-          id: purchase.id,
-          type: 'stock_add',
-          medicine_name: medicineMap[purchase.medicine_id] || 'Unknown',
-          quantity: purchase.quantity_purchased,
-          price: purchase.unit_cost,
-          total: purchase.total_cost,
-          created_at: purchase.purchase_date,
-          details: purchase.supplier_name ? `Supplier: ${purchase.supplier_name}` : ''
-        });
-      });
-
+// Add purchases
+(purchasesData || []).forEach((purchase: any) => {
+  allTransactions.push({
+    id: purchase.id,
+    type: purchase.supplier_name === 'Restock' ? 'stock_add' : 'new_medicine',
+    medicine_name: medicineMap[purchase.medicine_id] || 'Unknown',
+    quantity: purchase.quantity_purchased,
+    price: purchase.unit_cost,
+    total: purchase.total_cost,
+    created_at: purchase.purchase_date,
+    details: purchase.supplier_name ? `Supplier: ${purchase.supplier_name}` : ''
+  });
+});
       // Sort by date
       allTransactions.sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -128,9 +128,10 @@ export default function TransactionHistoryPage() {
             onChange={(e) => setTypeFilter(e.target.value as any)}
             className="w-full px-3 py-1 bg-background border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           >
-            <option value="all">All</option>
-            <option value="sale">💲 Sales</option>
-            <option value="stock_add">📦 Stock Arrivals</option>
+<option value="all">All</option>
+<option value="sale">💲 Sales</option>
+<option value="new_medicine">🆕 New Medicine</option>
+<option value="stock_add">📦 Stock Arrivals</option>
           </select>
         </div>
       </div>
@@ -175,15 +176,19 @@ export default function TransactionHistoryPage() {
                       {new Date(t.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      {t.type === 'sale' ? (
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">
-                          <ShoppingBag size={14} className="inline mr-1" /> Sale
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                          <Package size={14} className="inline mr-1" /> Stock Add
-                        </span>
-                      )}
+{t.type === 'sale' ? (
+  <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">
+    <ShoppingBag size={14} className="inline mr-1" /> Sale
+  </span>
+) : t.type === 'new_medicine' ? (
+  <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700">
+    <Package size={14} className="inline mr-1" /> Medicine Stock
+  </span>
+) : (
+  <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700">
+    <Package size={14} className="inline mr-1" /> Stock Add
+  </span>
+)}
                     </td>
                     <td className="px-4 py-3 text-sm text-foreground font-medium">
                       {t.medicine_name}
