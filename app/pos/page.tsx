@@ -66,7 +66,12 @@ const loadMedicines = async (showLoader = false, searchValue = search) => {
     }
   };
 
-  const addToCart = (medicine: Medicine) => {
+const addToCart = (medicine: Medicine) => {
+    if (medicine.expiry_date && new Date(medicine.expiry_date) < new Date()) {
+      toast.error(`❌ ${medicine.brand_name} is EXPIRED — cannot sell`);
+      return;
+    }
+
     const currentInCart = cart.find((item) => item.medicine.id === medicine.id)?.quantity || 0;
     const availableStock = medicine.quantity_on_hand - currentInCart;
 
@@ -243,30 +248,36 @@ const loadMedicines = async (showLoader = false, searchValue = search) => {
                 </div>
               ) : medicines.length > 0 ? (
                 medicines.map((medicine) => {
-                  const inCart = cart.find((item) => item.medicine.id === medicine.id)?.quantity || 0;
+const inCart = cart.find((item) => item.medicine.id === medicine.id)?.quantity || 0;
                   const availableStock = medicine.quantity_on_hand - inCart;
                   const isOutOfStock = availableStock <= 0;
+                  const isExpired = medicine.expiry_date ? new Date(medicine.expiry_date) < new Date() : false;
 
-              return (
+                  return (
                     <div
                       key={medicine.id}
-                      className="bg-card border border-border rounded-lg p-2 hover:shadow-md transition flex flex-col h-full"
+                      className="bg-card border border-border rounded-lg p-2 hover:shadow-md transition"
                     >
-                      <div className="mb-1 flex-1">
-                        <p className="font-semibold text-foreground text-xs leading-tight line-clamp-2">{medicine.brand_name}</p>
-                        <p className="text-[10px] text-muted-foreground leading-tight line-clamp-2">{medicine.generic_name}</p>
+                      <div className="mb-1">
+                        <p className="font-semibold text-foreground text-xs truncate">{medicine.brand_name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{medicine.generic_name}</p>
                         <p className="text-[10px] text-muted-foreground">
                           Stock: {medicine.quantity_on_hand}
                           {inCart > 0 && <span className="text-accent ml-1">({inCart})</span>}
                         </p>
+                        {medicine.expiry_date && (
+                          <p className={`text-[10px] ${isExpired ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
+                            Exp: {new Date(medicine.expiry_date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </p>
+                        )}
                         <p className="text-sm font-bold text-primary">₱{medicine.unit_price.toFixed(2)}</p>
                       </div>
                       <button
                         onClick={() => addToCart(medicine)}
-                        disabled={isOutOfStock}
-                        className="w-full bg-primary text-primary-foreground py-1 rounded text-xs hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed mt-auto"
+                        disabled={isOutOfStock || isExpired}
+                        className="w-full bg-primary text-primary-foreground py-1 rounded text-xs hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {isOutOfStock ? 'Out of Stock' : 'Add'}
+                        {isExpired ? 'Expired' : isOutOfStock ? 'Out of Stock' : 'Add'}
                       </button>
                     </div>
                   );

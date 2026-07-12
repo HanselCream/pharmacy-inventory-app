@@ -146,8 +146,20 @@ if (!formData.category) {
       if (editingId) {
         await updateMedicine(editingId, formData);
         toast.success('Medicine updated successfully');
-      } else {
-        await createMedicine(formData as Omit<Medicine, 'id' | 'created_at' | 'updated_at'>);
+} else {
+        const initialQty = formData.quantity_on_hand || 0;
+        const newMedicine = await createMedicine(formData as Omit<Medicine, 'id' | 'created_at' | 'updated_at'>);
+        if (initialQty > 0) {
+          await recordPurchase({
+            medicine_id: newMedicine.id,
+            quantity_purchased: initialQty,
+            unit_cost: formData.cost_price || formData.unit_price || 0,
+            total_cost: (formData.cost_price || formData.unit_price || 0) * initialQty,
+            supplier_name: formData.supplier || 'Initial Stock',
+            purchase_date: new Date().toISOString(),
+            received_date: new Date().toISOString(),
+          });
+        }
         toast.success('Medicine added successfully');
       }
       setShowForm(false);
@@ -202,12 +214,12 @@ const handleRestock = async (medicine: Medicine) => {
 
     setRestockingId(medicine.id);
     try {
-      await recordPurchase({
+await recordPurchase({
         medicine_id: medicine.id,
         quantity_purchased: qty,
-        unit_cost: 0,
-        total_cost: 0,
-        supplier_name: 'Restock',
+        unit_cost: medicine.cost_price || 0,
+        total_cost: (medicine.cost_price || 0) * qty,
+        supplier_name: 'Stock Arrival',
         purchase_date: new Date().toISOString(),
         received_date: new Date().toISOString(),
       });
