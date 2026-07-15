@@ -98,12 +98,25 @@ const handleAddCategory = () => {
   toast.success(`Category "${trimmed}" added`);
 };
 
-const handleDeleteCategory = (cat: string) => {
-  const inUse = medicines.some(m => m.category === cat);
-  if (inUse) {
-    toast.error(`Cannot delete "${cat}" — it's used by existing medicines`);
+// After
+const handleDeleteCategory = async (cat: string) => {
+  const supabase = createClient();
+  const { count, error } = await supabase
+    .from('medicines')
+    .select('id', { count: 'exact', head: true })
+    .eq('category', cat);
+
+  if (error) {
+    console.error(error);
+    toast.error('Error checking category usage');
     return;
   }
+
+  if ((count ?? 0) > 0) {
+    toast.error(`Cannot delete "${cat}" — used by ${count} medicine(s)`);
+    return;
+  }
+
   setCategories(categories.filter(c => c !== cat));
   toast.success(`Category "${cat}" deleted`);
 };
